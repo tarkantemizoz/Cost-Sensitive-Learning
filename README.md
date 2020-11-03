@@ -1,6 +1,6 @@
 # Cost-Sensitive-Learning
 A Mixed Integer Linear Programming Approach To Example-Dependent Cost-Sensitive Learning
 
-##Abstract
+#Abstract
 
 In this research, we study example-dependent cost-sensitive learning that brings about varying costs or returns depending on the labelling decisions and the instances. We introduce a new framework for cost sensitive learning that can be applied on binary and multi-class classification tasks while introducing example dependent returns/costs during training. The framework defines a mixed-integer programming model, that formulates a classification method and maximizes the total returns. Given the compelling nature of the mixed-integer linear programming problems, this model can be practically inefficient for training large scaled datasets to solve. Machine learning, on the other hand, has become a research interest to be used on optimization problems, e.g. to solve them or make them solved faster. To this end, we propose Cost Sensitive Logistic Regression, an approximation of the formulated linear model, which benefits from gradient descent based optimization by using deep learning tools. Furthermore, we also show that providing initial solutions from Cost Sensitive Logistic Regression to the linear programming model, the optimization performance of the mixed-integer programming solver can be enhanced.
