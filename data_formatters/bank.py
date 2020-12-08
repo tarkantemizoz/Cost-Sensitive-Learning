@@ -91,7 +91,7 @@ class bank_credit(GenericDataFormatter):
         if valid is not None:
             test_scl = scaler.transform(test)
             valid_scl = scaler.transform(valid) 
-            return train_scl, test_scl, valid_scl_scl  
+            return train_scl, test_scl, valid_scl
         
         elif test is not None:
             test_scl = scaler.transform(test)
@@ -107,10 +107,10 @@ class bank_credit(GenericDataFormatter):
         fixed_params = {
             'n_epochs': 1000,
             'device': "cpu",
-            'num_repeats': 1,
-            'testing' : False,
+            'num_repeats': 2,
+            'testing' : True,
             'validation': True,
-            'n_splits': 2,
+            'n_splits': 3,
             'scaler': True,
         }
 
