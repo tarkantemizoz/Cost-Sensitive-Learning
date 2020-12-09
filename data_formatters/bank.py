@@ -12,6 +12,7 @@
 import random
 import numpy as np
 import pickle
+import random
 import data_formatters.base
 
 from sklearn.model_selection import train_test_split
@@ -58,7 +59,7 @@ class bank_credit(GenericDataFormatter):
                                            self.returns,
                                            self.rmax,
                                            test_size=0.2,
-                                           random_state=42)         
+                                           random_state=random.randint(0,10000))         
             self.test = [x_test, r_test, rmax_test, y_test]
             
         else:
@@ -91,7 +92,7 @@ class bank_credit(GenericDataFormatter):
         if valid is not None:
             test_scl = scaler.transform(test)
             valid_scl = scaler.transform(valid) 
-            return train_scl, test_scl, valid_scl_scl  
+            return train_scl, test_scl, valid_scl
         
         elif test is not None:
             test_scl = scaler.transform(test)
@@ -107,10 +108,10 @@ class bank_credit(GenericDataFormatter):
         fixed_params = {
             'n_epochs': 1000,
             'device': "cpu",
-            'num_repeats': 1,
-            'testing' : False,
-            'validation': True,
-            'n_splits': 2,
+            'num_repeats': 5,
+            'testing' : True,
+            'validation': False,
+            'n_splits': 10,
             'scaler': True,
         }
 
@@ -131,7 +132,7 @@ class bank_credit(GenericDataFormatter):
         """Returns default model parameters."""
 
         bayes_params = {
-            'bayes_trials': 5,
+            'bayes_trials': 20,
             'batch_size_bayes': [8, 11],
             'dnn_layers_bayes': None,           
             'inner_cval': False,

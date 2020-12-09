@@ -6,12 +6,6 @@
 import warnings
 warnings.filterwarnings("ignore")
 import argparse
-import datetime as dte
-import os
-import json
-import numpy as np
-import pickle
-import torch
 
 import data_formatters.base
 import expt_settings.configs
@@ -35,13 +29,8 @@ def main(
     """Trains tft based on defined model params.
       Args:
         expt_name: Name of experiment
-        use_gpu: Whether to run tensorflow with GPU operations
-        model_folder: Folder path where models are serialized
-        data_csv_path: Path to csv file containing data
         data_formatter: Dataset-specific data fromatter (see
           expt_settings.dataformatter.GenericDataFormatter)
-        use_testing_mode: Uses a smaller models and data sizes for testing purposes
-          only -- switch to False to use original default settings
     """
     if not isinstance(data_formatter, data_formatters.base.GenericDataFormatter):
         raise ValueError(
@@ -50,11 +39,7 @@ def main(
     
     print("*** Training from defined parameters for {} ***".format(expt_name))
     
-  # Sets up default params
-    #fixed_params = data_formatter.get_experiment_params()
-    #params["model_folder"] = model_folder
-    
-    ml_methods = ["logistic", "tree", "xgboost"]
+    ml_methods = ["tree", "xgboost", "logistic"]
     
     params = data_formatter.get_default_model_params()
     for k in params:
@@ -63,8 +48,9 @@ def main(
     data_formatter.bayes = (True if use_hyperparam_opt == "yes" else False)    
     simulated_expt = ExperimentConfig.simulated_experiments
     writer = write_results(data_formatter)
+    num_repeats = data_formatter.params["num_repeats"]
     
-    for n in range(data_formatter.params["num_repeats"]):
+    for n in range(num_repeats):
         
         data_formatter.split_data()
         data_formatter.save_models(n, expt_name, simulated_expt)
@@ -92,7 +78,8 @@ def main(
                                           )
                 if use_mip_wi == "yes":
                     model.time_limit = time_limit
-                    model.give_initial = True              
+                    model.give_initial = True 
+                    train_scores, test_scores, val_scores = model.mip_opt()                   
                     writer.collect_results(n,
                                            "mip_wi",
                                            train_scores,
@@ -102,7 +89,7 @@ def main(
                 if use_mip == "yes":
                     model.time_limit = time_limit                
                     model.give_initial = False                                  
-                    #train_scores, test_scores, val_scores = model.mip_opt()()
+                    train_scores, test_scores, val_scores = model.mip_opt()
                     writer.collect_results(n,
                                            "mip",
                                            train_scores,
@@ -169,9 +156,12 @@ def main(
                                            train_scores,
                                            test_scores
                                            )                           
-        print(writer.test_df) 
-    print(writer.train_df)         
+        print("Printing test results.....")
+        print(writer.test_df)
+    #print(writer.train_df)         
     writer.print_results()
+    print("Printing average results.....")
+    print(writer.average_results)  
       
 if __name__ == "__main__":
 

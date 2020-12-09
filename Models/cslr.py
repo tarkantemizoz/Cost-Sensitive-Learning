@@ -7,6 +7,7 @@
 import torch
 import numpy as np
 import math
+import pickle
 
 from sklearn.metrics import f1_score, accuracy_score
 
@@ -14,8 +15,8 @@ from bayes_opt.bayes_linearnet import cslr_bayes
 from bayes_opt.utils import test_learning
 from Models.linearnet import LinearNet
 from Models.opt_torch import Optimization
-#from Models.gurobi_opt import Optimization_MIP
-#from gurobipy import *
+from Models.gurobi_opt import Optimization_MIP
+from gurobipy import *
 
 
 class cslr: 
@@ -36,8 +37,8 @@ class cslr:
         self.x_test = test[0] 
         self.r_train = train[1]
         self.r_test = test[1]
-        self.rmax_train = sum(train[2])        
-        self.rmax_test = sum(test[2]) 
+        self.rmax_train = train[2]       
+        self.rmax_test = test[2]
         self.y_train = train[3]     
         self.y_test = test[3]        
         self.x_val = (valid[0] if valid is not None and valid != [] else None)
@@ -47,7 +48,7 @@ class cslr:
         self.train_scores = []
         self.test_scores = []
         self.val_scores = []
-                                      
+                                    
     def opt_initial(self, beta_opt):
         
         scores = np.zeros((len(self.x_train), self.num_class))
@@ -68,8 +69,8 @@ class cslr:
                 is_deviate.append(i)
         self.x_train = np.delete(self.x_train, is_deviate, 0)
         self.r_train = np.delete(self.r_train, is_deviate, 0)
-        self.rmax_train = np.delete(self.rmax_train, is_deviate, 0)
-        self.y_train = np.delete(self.x_train, is_deviate, 0)  
+        self.rmax_train = np.delete(self.rmax_train, is_deviate)
+        self.y_train = np.delete(self.y_train, is_deviate)  
     
     def gradient(self):
 
@@ -190,14 +191,13 @@ class cslr:
         path = self.formatter.model_path+"_"+model_name
         self.model_mip.m.modelSense = GRB.MAXIMIZE
         self.model_mip.m.setParam(GRB.Param.TimeLimit, self.time_limit)
-        #self.model_mip.m.write(path+'.lp')        
+        self.model_mip.m.write(path+'.lp')        
         self.model_mip.m.optimize()       
-        variables = self.model_mip.m.getVars()
-        #pickle.dump(variables, open(path+"_params.dat", "wb"))
         
         test_probs = np.zeros((len(self.x_test), self.num_class))
         train_probs = np.zeros((len(self.x_train), self.num_class))  
-        
+
+     
         try:
             for i in range(len(self.x_test)):
                 for k in range(self.num_class):
@@ -213,6 +213,13 @@ class cslr:
                     for k in range(self.num_class):
                         val_probs[i,k] = sum(self.x_val[i,j] * self.model_mip.beta[k,j].x
                                              for j in range(self.num_features))  
+                        
+            vars_beta = np.zeros((self.num_class, self.num_features))  
+            for k in range(self.num_class):
+                for j in range(self.num_features):
+                    vars_beta[k,j] = self.model_mip.beta[k,j].x
+            pickle.dump(vars_beta, open(path+"_params.dat", "wb"))                        
+                        
             return (self.return_results(train_probs, test_probs, val_probs)
                     if self.x_val is not None
                     else (self.return_results(train_probs, test_probs)))
@@ -226,8 +233,8 @@ class cslr:
         
         test_return, test_outcome = test_learning(test_probs, self.r_test)
         train_return, train_outcome = test_learning(train_probs, self.r_train)
-        test_return = test_return / self.rmax_test
-        train_return = train_return / self.rmax_train 
+        test_return = test_return / sum(self.rmax_test)
+        train_return = train_return / sum(self.rmax_train) 
         test_acc, test_f1 = (accuracy_score(self.y_test, test_outcome),
                              f1_score(self.y_test, test_outcome, average="weighted")
                             )   
@@ -241,7 +248,7 @@ class cslr:
         if val_probs is not None:
             
             val_return, val_outcome = test_learning(val_probs, self.r_val)
-            val_return = val_return / self.rmax_val
+            val_return = val_return / sum(self.rmax_val)
             val_acc, val_f1 = (accuracy_score(self.y_val, val_outcome),
                                  f1_score(self.y_val, val_outcome, average="weighted"))  
             self.val_scores = [val_return, val_acc, val_f1]

@@ -41,32 +41,35 @@ class GenericDataFormatter(abc.ABC):
         """Performs validation sets."""
 
         fixed_params = self.get_fixed_params()
-        
-        if fixed_params["validation"] == True:
-            
-            self.train = []            
-            self.val_set = []         
-            self.train_set = []
-            self.n_splits = fixed_params.get("n_splits", 10)                                            
-            skf = StratifiedKFold(self.n_splits, shuffle=True)
-        
-            for train_index, val_index in skf.split(self.x_train, self.y_train):
                     
-                self.train_set.append(train_index)
-                self.val_set.append(val_index)
-                self.train.append([self.x_train[train_index],
-                             self.r_train[train_index],
-                             self.rmax_train[train_index],
-                             self.y_train[train_index]])
-                self.valid.append([self.x_train[val_index],
-                             self.r_train[val_index],
-                             self.rmax_train[val_index],
-                             self.y_train[val_index]])    
+        self.train = []
+        self.valid = []
+        self.val_set = []         
+        self.train_set = []
+        self.n_splits = fixed_params.get("n_splits", 10)                                            
+        skf = StratifiedKFold(self.n_splits, shuffle=True)
+        
+        for train_index, val_index in skf.split(self.x_train, self.y_train):
+                    
+            self.train_set.append(train_index)
+            self.val_set.append(val_index)
+            self.train.append([self.x_train[train_index],
+                               self.r_train[train_index],
+                               self.rmax_train[train_index],
+                               self.y_train[train_index]]
+                             )
+            self.valid.append([self.x_train[val_index],
+                               self.r_train[val_index],
+                               self.rmax_train[val_index],
+                               self.y_train[val_index]]
+                             )    
                 
-            pickle.dump(self.train_set,
-                        open(self.data_path+"_train_sets.dat", "wb"))
-            pickle.dump(self.val_set,
-                        open(self.data_path+"_valid_sets.dat", "wb"))
+        pickle.dump(self.train_set,
+                    open(self.data_path+"_train_sets.dat", "wb")
+                   )
+        pickle.dump(self.val_set,
+                    open(self.data_path+"_valid_sets.dat", "wb")
+                   )
                                                   
 
     def load_data(self, split=None):
@@ -108,7 +111,7 @@ class GenericDataFormatter(abc.ABC):
         self.model_path_temp = self.model_path
         self.results_path_temp = self.results_path 
         
-        data = [self.train, self.test, self.valid] 
+        data = [self.train, self.test] 
         pickle.dump(data, open(self.data_path+".dat", "wb"))
         
     @abc.abstractmethod

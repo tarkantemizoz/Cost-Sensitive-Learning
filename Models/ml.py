@@ -37,8 +37,8 @@ class ml_models:
         self.x_test = test[0] 
         self.r_train = train[1]
         self.r_test = test[1]
-        self.rmax_train = sum(train[2])        
-        self.rmax_test = sum(test[2]) 
+        self.rmax_train = train[2]       
+        self.rmax_test = test[2] 
         self.y_train = train[3]     
         self.y_test = test[3]        
         self.x_val = (valid[0] if valid is not None and valid != [] else None)
@@ -66,19 +66,19 @@ class ml_models:
             test_probs = dt.predict_proba(self.x_test) 
             
             if self.x_val is not None:
-                val_probs = dt.predict_proba(x_val) 
+                val_probs = dt.predict_proba(self.x_val) 
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
                 return self.return_results(train_probs, test_probs)
         
         else:                 
-            
+
             dt = DecisionTreeClassifier().fit(self.x_train, self.y_train)
             train_probs = dt.predict_proba(self.x_train) 
             test_probs = dt.predict_proba(self.x_test) 
             
             if self.x_val is not None:
-                val_probs = dt.predict_proba(x_val) 
+                val_probs = dt.predict_proba(self.x_val) 
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
                 return self.return_results(train_probs, test_probs)
@@ -158,7 +158,7 @@ class ml_models:
                 return self.return_results(train_probs, test_probs) 
             
         else:
-            
+
             dtrain = xgb.DMatrix(self.x_train, label=self.y_train)
             dtest = xgb.DMatrix(self.x_test, label=self.y_test)  
             param = {'objective': 'multi:softprob', 'num_class': self.r_train.shape[1]}
@@ -192,8 +192,8 @@ class ml_models:
         
         test_return, test_outcome = test_learning(test_probs, self.r_test)
         train_return, train_outcome = test_learning(train_probs, self.r_train)
-        test_return = test_return / self.rmax_test
-        train_return = train_return / self.rmax_train 
+        test_return = test_return / sum(self.rmax_test)
+        train_return = train_return / sum(self.rmax_train) 
         test_acc, test_f1 = (accuracy_score(self.y_test, test_outcome),
                              f1_score(self.y_test, test_outcome, average="weighted")
                             )   
@@ -207,7 +207,7 @@ class ml_models:
         if val_probs is not None:
             
             val_return, val_outcome = test_learning(val_probs, self.r_val)
-            val_return = val_return / self.rmax_val
+            val_return = val_return / sum(self.rmax_val)
             val_acc, val_f1 = (accuracy_score(self.y_val, val_outcome),
                                  f1_score(self.y_val, val_outcome, average="weighted"))  
             self.val_scores = [val_return, val_acc, val_f1]

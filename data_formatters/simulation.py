@@ -207,11 +207,11 @@ class data_generator(GenericDataFormatter):
         """Returns fixed model parameters for experiments."""
 
         fixed_params = {
-            'n_epochs': 1000,
+            'n_epochs': 10000,
             'device': "cpu",
-            'num_repeats': 5,
+            'num_repeats': 10,
             'testing' : True,
-            'validation': False,
+            'validation': True,
             'scaler': False
         }
         
@@ -259,8 +259,8 @@ class data_generator(GenericDataFormatter):
         params_simul['ex4'] = {
             'num_class': 3,
             'num_features': 25,
-            'noise': 1,
-            'n': 250,
+            'noise': 2,
+            'n': 1000,
             'n_test': 20000
         }             
                                 
