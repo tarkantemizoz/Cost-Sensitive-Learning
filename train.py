@@ -6,11 +6,6 @@
 import warnings
 warnings.filterwarnings("ignore")
 import argparse
-<<<<<<< HEAD
-=======
-import sys
-
->>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
 
 import data_formatters.base
 import expt_settings.configs
@@ -44,11 +39,7 @@ def main(
     
     print("*** Training from defined parameters for {} ***".format(expt_name))
     
-<<<<<<< HEAD
     ml_methods = ["tree", "xgboost", "logistic"]
-=======
-    ml_methods = ["logistic", "tree", "xgboost"]
->>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
     
     params = data_formatter.get_default_model_params()
     for k in params:
@@ -197,10 +188,10 @@ if __name__ == "__main__":
             default="yes",
             help="Whether to use Cost Sensitive Logistic Learning") 
         parser.add_argument(
-            'mip_wi',
-            metavar='w',
+            "mip_wi",
+            metavar="w",
             type=str,
-            nargs='?',
+            nargs="?",
             choices=["yes", "no"],            
             default="no",
             help="Whether to use MIP-WI")
@@ -221,18 +212,18 @@ if __name__ == "__main__":
             default="no",
             help="Whether to use ML algorithms")                            
         parser.add_argument(
-           'hyperparam_opt',
-            metavar='h',
+            "hyperparam_opt",
+            metavar="h",
             type=str,
-            nargs='?',
+            nargs="?",
             choices=["yes", "no"],            
             default="no",
             help="Whether to use Hyperparam Opt on CSLR")                
         parser.add_argument(
-            'time_limit',
-            metavar='tm',
+            "time_limit",
+            metavar="tm",
             type=int,
-            nargs='?',
+            nargs="?",
             default=100,
             help="Time Limit")               
         parser.add_argument(
