@@ -108,17 +108,10 @@ class bank_credit(GenericDataFormatter):
         fixed_params = {
             'n_epochs': 1000,
             'device': "cpu",
-<<<<<<< HEAD
             'num_repeats': 5,
             'testing' : True,
             'validation': False,
             'n_splits': 10,
-=======
-            'num_repeats': 2,
-            'testing' : True,
-            'validation': True,
-            'n_splits': 3,
->>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
             'scaler': True,
         }
 

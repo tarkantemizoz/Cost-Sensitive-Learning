@@ -209,11 +209,7 @@ class data_generator(GenericDataFormatter):
         fixed_params = {
             'n_epochs': 10000,
             'device': "cpu",
-<<<<<<< HEAD
             'num_repeats': 10,
-=======
-            'num_repeats': 2,
->>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
             'testing' : True,
             'validation': True,
             'scaler': False
