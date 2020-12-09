@@ -6,6 +6,11 @@
 import warnings
 warnings.filterwarnings("ignore")
 import argparse
+<<<<<<< HEAD
+=======
+import sys
+
+>>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
 
 import data_formatters.base
 import expt_settings.configs
@@ -39,7 +44,11 @@ def main(
     
     print("*** Training from defined parameters for {} ***".format(expt_name))
     
+<<<<<<< HEAD
     ml_methods = ["tree", "xgboost", "logistic"]
+=======
+    ml_methods = ["logistic", "tree", "xgboost"]
+>>>>>>> 665f34e38516ef9cc45c09fe16f193bf9be3460e
     
     params = data_formatter.get_default_model_params()
     for k in params:
