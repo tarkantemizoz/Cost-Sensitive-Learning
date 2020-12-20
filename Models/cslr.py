@@ -1,8 +1,17 @@
-#!/usr/bin/env python
 # coding: utf-8
+# Copyright 2020 Tarkan Temizoz
 
-# In[ ]:
-
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 import torch
 import numpy as np
@@ -10,14 +19,13 @@ import math
 import pickle
 
 from sklearn.metrics import f1_score, accuracy_score
+from gurobipy import *
 
 from bayes_opt.bayes_linearnet import cslr_bayes
 from bayes_opt.utils import test_learning
 from Models.linearnet import LinearNet
 from Models.opt_torch import Optimization
 from Models.gurobi_opt import Optimization_MIP
-from gurobipy import *
-
 
 class cslr: 
 
@@ -31,7 +39,10 @@ class cslr:
         self.formatter = formatter
         self.fixed_params = self.formatter.get_experiment_params()
         self.expt_params = self.formatter.get_default_model_params()
-        self.beta_initial = None   
+        self.time_limit = self.formatter.time_limit
+        self.beta_initial = None
+        self.analyze_first_feasible = True
+        self.expt = "cslr"
         
         self.x_train = train[0]
         self.x_test = test[0] 
@@ -71,7 +82,7 @@ class cslr:
         self.r_train = np.delete(self.r_train, is_deviate, 0)
         self.rmax_train = np.delete(self.rmax_train, is_deviate)
         self.y_train = np.delete(self.y_train, is_deviate)  
-    
+                
     def gradient(self):
 
         self.dnn_layers = int(self.expt_params.get("dnn_layers", 1))
@@ -164,19 +175,14 @@ class cslr:
                 if "layer" in name:
                     self.beta_initial = param.data.detach().cpu().clone().numpy() 
                     
-        torch.save(self.model.state_dict(), self.formatter.model_path+"_cslr.pt")                     
-        
+        torch.save(self.model.state_dict(), self.formatter.model_path+"_cslr.pt")
         return (self.return_results(train_probs, test_probs, val_probs)
                 if self.x_val is not None
                 else (self.return_results(train_probs, test_probs)))
     
-    def ret_model(self):
-        return self.model
-    
     def mip_opt(self):
-    
-        if self.give_initial == True:
-            model_name = "mip_wi"
+        
+        if self.expt == "mip_wi":
             if self.beta_initial is None:
                 self.gradient()
             self.opt_initial(self.beta_initial)
@@ -186,40 +192,83 @@ class cslr:
                     self.model_mip.beta[i,j].start = self.beta_initial[i,j]
             self.model_mip.m.update() 
         else:
-            model_name = "mip"            
             self.model_mip = Optimization_MIP({}, self.x_train, self.r_train)
-        path = self.formatter.model_path+"_"+model_name
+        path = self.formatter.model_path+"_"+self.expt
+        self.mip_soln = {}
         self.model_mip.m.modelSense = GRB.MAXIMIZE
         self.model_mip.m.setParam(GRB.Param.TimeLimit, self.time_limit)
-        self.model_mip.m.write(path+'.lp')        
-        self.model_mip.m.optimize()       
-        
+        self.model_mip.m.write(path+'.lp')
+        if self.analyze_first_feasible == True:
+            if self.expt == "mip_wi":
+                self.model_mip.m.setParam(GRB.Param.SolutionLimit, 2)
+            else:
+                self.model_mip.m.setParam(GRB.Param.SolutionLimit, 1)
+            self.model_mip.m.optimize()
+            mip_gap, obj, time_passed = (self.model_mip.m.MIPGap,
+                                         self.model_mip.m.objVal,
+                                         self.model_mip.m.RunTime)
+            self.mip_soln["first_feasible"] = {
+                "mip_gap": mip_gap,
+                "obj_val": obj,
+                "norm_obj_val": obj/sum(self.rmax_train),
+                "time_passed": time_passed
+            }
+            runTime = self.model_mip.m.RunTime
+            new_time_limit = self.time_limit - runTime
+            if new_time_limit > 0:
+                self.model_mip.m.setParam(GRB.Param.TimeLimit, new_time_limit)
+                self.model_mip.m.setParam(GRB.Param.SolutionLimit, 2000000000)
+                self.model_mip.m.optimize()
+                runTime = runTime + self.model_mip.m.RunTime
+                mip_gap, obj, time_passed = self.model_mip.m.MIPGap, self.model_mip.m.objVal, runTime
+                self.mip_soln["last_feasible"] = {
+                    "mip_gap": mip_gap,
+                    "obj_val": obj,
+                    "norm_obj_val": obj/sum(self.rmax_train),
+                    "time_passed": time_passed
+                }
+            else:
+                self.mip_soln["last_feasible"] = self.mip_soln["first_feasible"]
+        else:
+            self.model_mip.m.optimize()
+            mip_gap, obj, time_passed = (self.model_mip.m.MIPGap,
+                                         self.model_mip.m.objVal,
+                                         self.model_mip.m.RunTime)
+            self.mip_soln["last_feasible"] = {
+                "mip_gap": mip_gap,
+                "obj_val": obj,
+                "norm_obj_val": obj/sum(self.rmax_train),
+                "time_passed": time_passed
+            }
+            self.mip_soln["first_feasible"] = {
+                "mip_gap": "Unknown",
+                "obj_val": "Unknown",
+                "norm_obj_val": "Unknown",
+                "time_passed": "Unknown"
+            }
         test_probs = np.zeros((len(self.x_test), self.num_class))
         train_probs = np.zeros((len(self.x_train), self.num_class))  
-
-     
         try:
+            vars_beta = np.zeros((self.num_class, self.num_features))
+            for k in range(self.num_class):
+                for j in range(self.num_features):
+                    vars_beta[k,j] = self.model_mip.beta[k,j].x
+            pickle.dump(vars_beta, open(path+"_params.dat", "wb"))
+            
             for i in range(len(self.x_test)):
                 for k in range(self.num_class):
-                    test_probs[i,k] = sum(self.x_test[i,j] * self.model_mip.beta[k,j].x
+                    test_probs[i,k] = sum(self.x_test[i,j] * vars_beta[k,j]
                                           for j in range(self.num_features))
             for i in range(len(self.x_train)):
                 for k in range(self.num_class):
-                    train_probs[i,k] = sum(self.x_train[i,j] * self.model_mip.beta[k,j].x
+                    train_probs[i,k] = sum(self.x_train[i,j] * vars_beta[k,j]
                                            for j in range(self.num_features))  
             if self.x_val is not None:
                 val_probs = np.zeros((len(self.x_val), self.num_class))       
                 for i in range(len(self.x_val)):
                     for k in range(self.num_class):
-                        val_probs[i,k] = sum(self.x_val[i,j] * self.model_mip.beta[k,j].x
-                                             for j in range(self.num_features))  
-                        
-            vars_beta = np.zeros((self.num_class, self.num_features))  
-            for k in range(self.num_class):
-                for j in range(self.num_features):
-                    vars_beta[k,j] = self.model_mip.beta[k,j].x
-            pickle.dump(vars_beta, open(path+"_params.dat", "wb"))                        
-                        
+                        val_probs[i,k] = sum(self.x_val[i,j] * vars_beta[k,j]
+                                             for j in range(self.num_features))
             return (self.return_results(train_probs, test_probs, val_probs)
                     if self.x_val is not None
                     else (self.return_results(train_probs, test_probs)))
@@ -227,8 +276,17 @@ class cslr:
             return (self.return_results(train_probs, test_probs, val_probs)
                     if self.x_val is not None
                     else (self.return_results(train_probs, test_probs)))
+    
+    def result(self):
+
+        if self.expt == "cslr":
             
-     
+            return self.gradient()
+                
+        if self.expt == "mip_wi" or self.expt == "mip":
+                    
+            return self.mip_opt()
+            
     def return_results(self, train_probs, test_probs, val_probs=None):
         
         test_return, test_outcome = test_learning(test_probs, self.r_test)
@@ -244,6 +302,8 @@ class cslr:
         self.test_scores, self.train_scores = ([test_return, test_acc, test_f1],
                                      [train_return, train_acc, train_f1]
                                     )
+        if self.expt == "mip_wi" or self.expt == "mip":
+            self.train_scores.append(self.mip_soln)
         
         if val_probs is not None:
             

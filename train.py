@@ -1,14 +1,41 @@
-#!/usr/bin/env python
 # coding: utf-8
+# Copyright 2020 Tarkan Temizoz
 
-# In[ ]:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-import warnings
-warnings.filterwarnings("ignore")
+
+"""Trains CSLR based on a defined set of parameters.
+    Uses default parameters supplied from the configs file to train a TFT model from
+    scratch.
+    Usage:
+    python3 train {expt_name} {use_cslr} {mip_wi} {mip} {ml} {hyperparam_opt}
+    {time_limit} {output_folder}
+    Command line args:
+    expt_name: Name of dataset/experiment to train.
+    use_cslr: Whether to use Cost-Sensitive Logistic Regression.
+    mip_wi: Whether to use Mixed-Integer Programming with Initial Solution.
+    mip: Whether to use Mixed-Integer Programming.
+    ml: Whether to use state-of-the-art Machine Learning models.
+    hyperparam_opt: Whether to use Bayesian Optimization for hyperparameter tuning.
+    time_limit: Time limit for MIP models.
+    output_folder: Root folder in which experiment is saved.
+"""
+
 import argparse
 
 import data_formatters.base
 import expt_settings.configs
+
 from Models.cslr import cslr
 from Models.ml import ml_models
 from bayes_opt.utils import write_results
@@ -17,20 +44,18 @@ ExperimentConfig = expt_settings.configs.ExperimentConfig
 
 def main(
         expt_name,
-        use_cslr,
-        use_mip_wi,
-        use_mip,
+        edcs_methods,
         use_ml,
-        use_hyperparam_opt,
-        time_limit,
         data_formatter
     ): 
     
-    """Trains tft based on defined model params.
+    """Trains cslr based on defined model params.
       Args:
-        expt_name: Name of experiment
-        data_formatter: Dataset-specific data fromatter (see
-          expt_settings.dataformatter.GenericDataFormatter)
+        expt_name: Name of experiment.
+        edcs_methods: List of EDCS solving approaches.
+        use_ml: Whether to use state-of-the-art Machine Learning models.
+        data_formatter: Dataset-specific data fromatter (s
+        expt_settings.dataformatter.GenericDataFormatter)
     """
     if not isinstance(data_formatter, data_formatters.base.GenericDataFormatter):
         raise ValueError(
@@ -45,7 +70,6 @@ def main(
     for k in params:
         print("{}: {}".format(k, params[k]))  
         
-    data_formatter.bayes = (True if use_hyperparam_opt == "yes" else False)    
     simulated_expt = ExperimentConfig.simulated_experiments
     writer = write_results(data_formatter)
     num_repeats = data_formatter.params["num_repeats"]
@@ -61,107 +85,51 @@ def main(
 
             for split in range(data_formatter.n_splits):
                 
-                print("Loading & splitting data...")                       
+                print("***Loading & splitting data***")
                 train, test, valid = data_formatter.load_data(split)
-                model = cslr(data_formatter, 
-                             train,
-                             test,
-                             valid
-                            )
-                if use_cslr == "yes":
-                    train_scores, test_scores, val_scores = model.gradient()
-                    writer.collect_results(n,
-                                           "cslr",
-                                           train_scores,
-                                           test_scores,
-                                           val_scores
-                                          )
-                if use_mip_wi == "yes":
-                    model.time_limit = time_limit
-                    model.give_initial = True 
-                    train_scores, test_scores, val_scores = model.mip_opt()                   
-                    writer.collect_results(n,
-                                           "mip_wi",
-                                           train_scores,
-                                           test_scores,
-                                           val_scores
-                                          )                    
-                if use_mip == "yes":
-                    model.time_limit = time_limit                
-                    model.give_initial = False                                  
-                    train_scores, test_scores, val_scores = model.mip_opt()
-                    writer.collect_results(n,
-                                           "mip",
-                                           train_scores,
-                                           test_scores,
-                                           val_scores
-                                          )                    
+                model = cslr(data_formatter, train, test, valid)
+
+                for m in edcs_methods:
+                    
+                    model.expt = m
+                    train_scores, test_scores, val_scores = model.result()
+                    writer.collect_results(n, m, train_scores, test_scores, val_scores)
+
                 if use_ml == "yes":
-                    ml_model = ml_models(data_formatter, 
-                                         train,
-                                         test,
-                                         valid
-                                        )
+                    ml_model = ml_models(data_formatter, train, test, valid)
                     for m in ml_methods:
                         ml_model.expt = m
                         train_scores, test_scores, val_scores = ml_model.result()
-                        writer.collect_results(n,
-                                               m,
-                                               train_scores,
-                                               test_scores,
-                                               val_scores
-                                              )                        
+                        writer.collect_results(n, m, train_scores, test_scores, val_scores)
         else:
-            print("Loading & splitting data...")                                    
-            train, test, _ = data_formatter.load_data()                        
-            model = cslr(data_formatter, 
-                         train,
-                         test
-                        )
-            if use_cslr == "yes":
-                train_scores, test_scores, _ = model.gradient()
-                writer.collect_results(n,
-                                       "cslr",
-                                       train_scores,
-                                       test_scores
-                                       )       
-            if use_mip_wi == "yes":
-                model.time_limit = time_limit                  
-                model.give_initial = True              
-                train_scores, test_scores, _ = model.mip_opt()
-                writer.collect_results(n,
-                                       "mip_wi",
-                                       train_scores,
-                                       test_scores
-                                       )                  
-            if use_mip == "yes":
-                model.time_limit = time_limit                  
-                model.give_initial = False                                  
-                train_scores, test_scores, _ = model.mip_opt()
-                writer.collect_results(n,
-                                       "mip",
-                                       train_scores,
-                                       test_scores
-                                       )                  
+            
+            print("***Loading & splitting data***")
+            train, test, _ = data_formatter.load_data()
+            model = cslr(data_formatter, train, test)
+            
+            for m in edcs_methods:
+                
+                model.expt = m
+                train_scores, test_scores, _ = model.result()
+                writer.collect_results(n, m, train_scores, test_scores)
+
             if use_ml == "yes":
-                ml_model = ml_models(data_formatter, 
-                                     train,
-                                     test
-                                    )
+                ml_model = ml_models(data_formatter, train, test)
                 for m in ml_methods:
                     ml_model.expt = m
                     train_scores, test_scores, _ = ml_model.result()
-                    writer.collect_results(n,
-                                           m,
-                                           train_scores,
-                                           test_scores
-                                           )                           
+                    writer.collect_results(n, m,train_scores, test_scores)
+
         print("Printing test results.....")
-        print(writer.test_df)
+        print(writer.test_df.tail(6))
+        print(writer.mip_perf)
+        writer.print_results()
+            
     #print(writer.train_df)         
-    writer.print_results()
     print("Printing average results.....")
-    print(writer.average_results)  
+    print(writer.average_results)
+    print("Printing mip performance results.....")
+    print(writer.mip_avg_perf)
       
 if __name__ == "__main__":
 
@@ -250,7 +218,6 @@ if __name__ == "__main__":
 
     expt_name, use_cslr, mip_wi, mip, ml, hyperparam_opt, time_limit, folder = get_args()
     
-    print("Using output folder {}".format(folder))    
     config = ExperimentConfig(expt_name, folder)
     formatter = config.make_data_formatter()
            
@@ -258,15 +225,22 @@ if __name__ == "__main__":
     formatter.data_folder = config.data_folder
     formatter.model_folder = config.model_folder
     formatter.results_folder = config.results_folder
+    formatter.time_limit = time_limit
+    formatter.bayes = (True if hyperparam_opt == "yes" else False)
     
+    edcs_methods = []
+    if use_cslr == "yes":
+        edcs_methods.append("cslr")
+    if mip_wi == "yes":
+        edcs_methods.append("mip_wi")
+    if mip == "yes":
+        edcs_methods.append("mip")
+
+    # For new experiments customise inputs to main() .
     main(
         expt_name=expt_name,
-        use_cslr=use_cslr,
-        use_mip_wi=mip_wi,
-        use_mip=mip,
+        edcs_methods=edcs_methods,
         use_ml=ml,
-        use_hyperparam_opt=hyperparam_opt,
-        time_limit=time_limit,
         data_formatter=formatter
     ) 
 

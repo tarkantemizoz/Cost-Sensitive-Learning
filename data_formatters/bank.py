@@ -1,25 +1,26 @@
-#!/usr/bin/env python
 # coding: utf-8
+# Copyright 2020 Tarkan Temizoz
 
-# In[ ]:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-import random
 import numpy as np
 import pickle
-import random
 import data_formatters.base
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 GenericDataFormatter = data_formatters.base.GenericDataFormatter
-
 
 class bank_credit(GenericDataFormatter):
     
@@ -32,10 +33,9 @@ class bank_credit(GenericDataFormatter):
         
         self.features = pickle.load(open("datasets/bank_features","rb"))
         self.returns = pickle.load(open("datasets/bank_returns","rb"))
-        self.outcomes = pickle.load(open("datasets/bank_outcomes","rb"))
-        self.rmax = np.zeros(len(self.returns))
-        for i in range(len(self.rmax)):
-            self.rmax[i] = self.returns[i,np.argmax(self.returns[i])]
+        self.outcomes = np.argmax(self.returns, 1)
+        self.rmax = np.amax(self.returns, 1)
+        self.seed = 99
         self.train = []
         self.test = []     
         self.valid = []      
@@ -59,7 +59,7 @@ class bank_credit(GenericDataFormatter):
                                            self.returns,
                                            self.rmax,
                                            test_size=0.2,
-                                           random_state=random.randint(0,10000))         
+                                           random_state=self.seed)
             self.test = [x_test, r_test, rmax_test, y_test]
             
         else:
@@ -69,7 +69,8 @@ class bank_credit(GenericDataFormatter):
                                                                            self.returns,
                                                                            self.rmax)   
             
-        self.train = [self.x_train, self.r_train, self.rmax_train, self.y_train]   
+        self.train = [self.x_train, self.r_train, self.rmax_train, self.y_train]
+        self.seed += 1
 
 
     def transform_inputs(self, train, test=None, valid=None):
@@ -86,7 +87,7 @@ class bank_credit(GenericDataFormatter):
         if self.scaler == False:
             raise ValueError('Scaler has not been set!')    
             
-        scaler = StandardScaler()
+        scaler = MinMaxScaler()
         train_scl = scaler.fit_transform(train)
         
         if valid is not None:
@@ -106,13 +107,13 @@ class bank_credit(GenericDataFormatter):
         """Returns fixed model parameters for experiments."""
 
         fixed_params = {
-            'n_epochs': 1000,
+            'n_epochs': 100,
             'device': "cpu",
-            'num_repeats': 5,
-            'testing' : True,
-            'validation': False,
+            'num_repeats': 3,
+            'testing' : False,
+            'validation': True,
             'n_splits': 10,
-            'scaler': True,
+            'scaler': True
         }
 
         return fixed_params
@@ -122,7 +123,8 @@ class bank_credit(GenericDataFormatter):
 
         model_params = {
             'dnn_layers': 1,
-            'learning_rate': 0.005,
+            'learning_rate': 0.0005,
+            'batch_size': 64,
             'batch_norm': False
         }
 
@@ -132,11 +134,11 @@ class bank_credit(GenericDataFormatter):
         """Returns default model parameters."""
 
         bayes_params = {
-            'bayes_trials': 20,
+            'bayes_trials': 100,
             'batch_size_bayes': [8, 11],
             'dnn_layers_bayes': None,           
-            'inner_cval': False,
-            'n_val_splits': 10
+            'inner_cval': True,
+            'n_val_splits': 5
         }
 
         return bayes_params

@@ -1,10 +1,17 @@
-#!/usr/bin/env python
 # coding: utf-8
+# Copyright 2020 Tarkan Temizoz
 
-# In[ ]:
-
-
-# coding=utf-8
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 """Default data formatting functions for experiments.
 For new datasets, inherit form GenericDataFormatter and implement
@@ -47,7 +54,7 @@ class GenericDataFormatter(abc.ABC):
         self.val_set = []         
         self.train_set = []
         self.n_splits = fixed_params.get("n_splits", 10)                                            
-        skf = StratifiedKFold(self.n_splits, shuffle=True)
+        skf = StratifiedKFold(self.n_splits, shuffle=True, random_state=self.seed)
         
         for train_index, val_index in skf.split(self.x_train, self.y_train):
                     
@@ -62,8 +69,8 @@ class GenericDataFormatter(abc.ABC):
                                self.r_train[val_index],
                                self.rmax_train[val_index],
                                self.y_train[val_index]]
-                             )    
-                
+                             )
+
         pickle.dump(self.train_set,
                     open(self.data_path+"_train_sets.dat", "wb")
                    )
@@ -118,11 +125,7 @@ class GenericDataFormatter(abc.ABC):
     def get_fixed_params(self):
         """Defines the fixed parameters used by the model for training.
         Requires the following keys:
-          'total_time_steps': Defines the total number of time steps used by TFT
-          'num_encoder_steps': Determines length of LSTM encoder (i.e. history)
-          'num_epochs': Maximum number of epochs for training
-          'early_stopping_patience': Early stopping param for keras
-          'multiprocessing_workers': # of cpus for data processing
+        to be defined...
         Returns:
           A dictionary of fixed parameters, e.g.:
           fixed_params = {
@@ -159,11 +162,7 @@ class GenericDataFormatter(abc.ABC):
     def get_tuning_params(self):
         """Defines the fixed parameters used by the model for training.
         Requires the following keys:
-          'total_time_steps': Defines the total number of time steps used by TFT
-          'num_encoder_steps': Determines length of LSTM encoder (i.e. history)
-          'num_epochs': Maximum number of epochs for training
-          'early_stopping_patience': Early stopping param for keras
-          'multiprocessing_workers': # of cpus for data processing
+        to be defined....
         Returns:
           A dictionary of fixed parameters, e.g.:
           fixed_params = {

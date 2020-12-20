@@ -1,16 +1,18 @@
-#!/usr/bin/env python
 # coding: utf-8
+# Copyright 2020 Tarkan Temizoz
 
-# In[ ]:
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
-import random
 import numpy as np
 import data_formatters.base
 
@@ -26,6 +28,7 @@ class data_generator(GenericDataFormatter):
         self.scaler = False
         self.validation = self.params["validation"]
         self.testing = self.params["testing"]
+        self.seed = 42
         self.train = []
         self.test = []     
         self.valid = []  
@@ -54,96 +57,83 @@ class data_generator(GenericDataFormatter):
             return train, test
         else:
             return train
-          
+
     def create_dataset(self):
         
         self.simul_params = self.get_simulation_params()[self.expt_name]
-        self.seed = int(self.simul_params.get("seed", random.randint(0,10000)))
         self.n = int(self.simul_params["n"])
         self.n_test = int(self.simul_params["n_test"])
         self.noise = float(self.simul_params["noise"])
         self.num_features = int(self.simul_params["num_features"])
         self.num_class = int(self.simul_params["num_class"])
-        self.expt_path = "_"+str(self.simul_params["n"])+"_"+str(self.simul_params["noise"])                    
-        random.seed(self.seed)        
-       
-        self.x_train = np.zeros((self.n, self.num_features))
-        self.x_test = np.zeros((self.n_test, self.num_features))        
-        for i in range(self.n):
-            for j in range(self.num_features):
-                    self.x_train[i,j] = (np.random.normal(0,1) if j % 2 == 0 else random.randint(0, 1))
-        for i in range(self.n_test):
-            for j in range(self.num_features):
-                    self.x_test[i,j] = (np.random.normal(0,1) if j % 2 == 0 else random.randint(0, 1))  
-                    
+        self.expt_path = ("_"+str(self.n)
+                          +"_"+str(self.noise)
+                          +"_"+str(self.time_limit))
+        n_total = self.n + self.n_test
+        
+        np.random.seed(self.seed)
+        data_int = np.random.randint(2, size = (n_total, self.num_features))
+        np.random.seed(self.seed)
+        data_random = np.random.normal(0, 1, size = (n_total, self.num_features))
+        data = np.zeros((n_total, self.num_features))
+        for j in range(self.num_features):
+            data[:,j] = (data_random[:,j] if j % 2 == 0 else data_int[:,j])
+        self.x_train = data[0:self.n]
+        self.x_test = data[self.n:n_total]
+        
         self.y_train = self.decision(self.x_train)
         self.y_test = self.decision(self.x_test)
+
         mean = self.y_train.mean()
         std = self.y_train.std()
         self.y_train = (self.y_train - mean) / std
         self.y_test = (self.y_test - mean) / std
-        for i in range(len(self.y_train)):
-            for j in range(self.num_class):
-                self.y_train[i,j] = self.y_train[i,j] + np.random.normal(0,self.noise)
+        np.random.seed(self.seed + n_total)
+        noise = np.random.normal(0, self.noise, size = (self.n, self.num_class))
+        self.y_train = self.y_train + noise
                 
-        self.r_train, self.y_train = self.returns(self.x_train, self.y_train)
-        self.r_test, self.y_test =  self.returns(self.x_test, self.y_test)
-        
-        self.rmax_train = np.zeros(len(self.r_train))
-        for i in range(len(self.r_train)):
-            self.rmax_train[i] = self.r_train[i,np.argmax(self.r_train[i])]
-        self.rmax_test = np.zeros(len(self.r_test))
-        for i in range(len(self.r_test)):
-            self.rmax_test[i] = self.r_test[i,np.argmax(self.r_test[i])]                
-            
-    def returns(self, arr, y):        
-        
-        returns = np.zeros((len(arr),self.num_class))
-        outcomes = np.zeros(len(arr))
+        self.r_train, self.y_train = self.returns(self.y_train)
+        self.r_test, self.y_test = self.returns(self.y_test)
+        self.rmax_train = np.amax(self.r_train, 1)
+        self.rmax_test = np.amax(self.r_test, 1)
+        self.seed += 1
 
-        if self.expt_name == "ex1":
+    def returns(self, y):
+        
+        returns = np.zeros((len(y),self.num_class))
+        outcomes = np.argmax(y, 1)
+        
+        if self.expt_name == "ex1" or self.expt_name == "ex2":
             
-            for i in range(len(arr)):             
-                
-                outcomes[i] = np.argmax(y[i])
-                returns[i,0] = (random.uniform(100,500)
-                                if np.argmax(y[i]) == 0 else -random.uniform(50,150))    
-                returns[i,1] = (random.uniform(500,2000)
-                                if np.argmax(y[i]) == 1 else -random.uniform(50,150))  
-                
-        elif self.expt_name == "ex2":
+            np.random.seed(self.seed)
+            ret = np.concatenate((np.random.uniform(100,500,(len(y),1)),
+                                  -np.random.uniform(50,150,(len(y),1)),
+                                  np.random.uniform(500,2000,(len(y),1)),
+                                  -np.random.uniform(50,150,(len(y),1))),
+                                 axis = 1)
             
-            for i in range(len(arr)):
+            for i in range(len(y)):
                 
-                outcomes[i] = np.argmax(y[i])
-                returns[i,0] = (random.uniform(100,500)
-                                if np.argmax(y[i]) == 0 else -random.uniform(50,150))    
-                returns[i,1] = (random.uniform(500,2000)
-                                if np.argmax(y[i]) == 1 else -random.uniform(50,150))   
+                returns[i,0] = (ret[i,0] if outcomes[i] == 0 else ret[i,1])
+                returns[i,1] = (ret[i,2] if outcomes[i] == 1 else ret[i,3])
                 
-        elif self.expt_name == "ex3":
+        elif self.expt_name == "ex3" or self.expt_name == "ex4":
             
-            for i in range(len(arr)):
-                    
-                outcomes[i] = np.argmax(y[i])
-                returns[i,0] = (random.uniform(500,2000)
-                                if np.argmax(y[i]) == 0 else -random.uniform(50,150))
-                returns[i,1] = (random.uniform(300,500)
-                                if np.argmax(y[i]) == 1 else -random.uniform(50,150))
-                returns[i,2] = (random.uniform(100,300)
-                                if np.argmax(y[i]) == 2 else -random.uniform(50,150))  
-                    
-        elif self.expt_name == "ex4":
-            
-            for i in range(len(arr)):
+            np.random.seed(self.seed)
+            ret = np.concatenate((np.random.uniform(500,2000,(len(y),1)),
+                                  -np.random.uniform(50,150,(len(y),1)),
+                                  np.random.uniform(300,500,(len(y),1)),
+                                  -np.random.uniform(50,150,(len(y),1)),
+                                  np.random.uniform(100,300,(len(y),1)),
+                                  -np.random.uniform(50,150,(len(y),1))),
+                                 axis = 1)
                 
-                outcomes[i] = np.argmax(y[i])
-                returns[i,0] = (random.uniform(500,2000)
-                                if np.argmax(y[i]) == 0 else -random.uniform(50,150))
-                returns[i,1] = (random.uniform(300,500)
-                                if np.argmax(y[i]) == 1 else -random.uniform(50,150))
-                returns[i,2] = (random.uniform(100,300)
-                                if np.argmax(y[i]) == 2 else -random.uniform(50,150)) 
+            for i in range(len(y)):
+            
+                returns[i,0] = (ret[i,0] if outcomes[i] == 0 else ret[i,1])
+                returns[i,1] = (ret[i,2] if outcomes[i] == 1 else ret[i,3])
+                returns[i,2] = (ret[i,4] if outcomes[i] == 2 else ret[i,5])
+
         else:
             
             raise ValueError('Unknown experiment has been chosen!') 
@@ -207,11 +197,11 @@ class data_generator(GenericDataFormatter):
         """Returns fixed model parameters for experiments."""
 
         fixed_params = {
-            'n_epochs': 10000,
+            'n_epochs': 1000,
             'device': "cpu",
-            'num_repeats': 10,
+            'num_repeats': 1,
             'testing' : True,
-            'validation': True,
+            'validation': False,
             'scaler': False
         }
         
@@ -225,7 +215,7 @@ class data_generator(GenericDataFormatter):
 
         model_params = {
             'dnn_layer': 1,
-            'learning_rate': 0.005,
+            'learning_rate': 0.01,
             'batch_size': 1000,
             'batch_norm': False
         }
@@ -238,7 +228,7 @@ class data_generator(GenericDataFormatter):
         params_simul['ex1'] = {
             'num_class': 2,
             'num_features': 15,
-            'noise': 1,
+            'noise': 0.5,
             'n': 1000,
             'n_test': 20000,
         }
@@ -246,21 +236,21 @@ class data_generator(GenericDataFormatter):
             'num_class': 2,
             'num_features': 25,
             'noise': 1,
-            'n': 1000,
+            'n': 500,
             'n_test': 20000
         }
         params_simul['ex3'] = {
             'num_class': 3,
             'num_features': 15,
-            'noise': 1,
-            'n': 500,
+            'noise': 0.5,
+            'n': 5000,
             'n_test': 20000
         }
         params_simul['ex4'] = {
             'num_class': 3,
             'num_features': 25,
-            'noise': 2,
-            'n': 1000,
+            'noise': 1,
+            'n': 5000,
             'n_test': 20000
         }             
                                 
