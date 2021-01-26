@@ -1,5 +1,5 @@
 # coding: utf-8
-# Copyright 2020 Tarkan Temizoz
+# Copyright 2020 Mert Yuksekgonul, Tarkan Temizoz
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
