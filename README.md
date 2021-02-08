@@ -8,7 +8,7 @@ In this research, we study example-dependent cost-sensitive learning that brings
 # How to run default experiments
 
 
-``'bash
+```bash
 py -m train expt_name cslr mip_wi mip ml hyperparam_opt time_limit output_folder
 ```
 
