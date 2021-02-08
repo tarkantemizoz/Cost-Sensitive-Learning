@@ -20,19 +20,18 @@ To run all models  full ,
 
 ### Step 1:
 ```bash
-def make_data_formatter(self):
-    """Gets a data formatter object for experiment.
-
-    Returns:
-      Default DataFormatter per experiment.
-    """
-
-    data_formatter_class = {
-        'volatility': data_formatters.volatility.VolatilityFormatter,
-        'electricity': data_formatters.electricity.ElectricityFormatter,
-        'traffic': data_formatters.traffic.TrafficFormatter,
-        'example': data_formatters.example.ExampleFormatter, # new entry here!
-    }
+    def make_data_formatter(self):
+        """Gets a data formatter object for experiment.
+        Returns:
+          Default DataFormatter per experiment.
+        """
+        dataset = {       
+            'bank_credit': data_formatters.bank.bank_credit
+        }
+        for ex in ExperimentConfig.simulated_experiments:
+            dataset[ex] = data_formatters.simulation.data_generator
+        
+        return dataset[self.experiment]()
 ```
 
 
