@@ -11,5 +11,9 @@ In this research, we study example-dependent cost-sensitive learning that brings
 ```bash
 py -m train expt_name cslr mip_wi mip ml hyperparam_opt time_limit output_folder
 ```
+(options are {'yes' or'no'}).
+Specify the name of the experiment expt_name and choose which method(s) to run.
+For full , 
+
 
 # Customizing for new data sets
