@@ -18,6 +18,10 @@ To run all models  full ,
 
 ## How to Customize for new Data Sets
 
+### Step 1: Create custom data file
+
+First, create inheriting 
+
 ### Step 1:
 ```bash
     def make_data_formatter(self):
@@ -27,15 +31,24 @@ To run all models  full ,
         """
         dataset = {       
             'bank_credit': data_formatters.bank.bank_credit
+            'example': data_formatters.example.ExampleFormatter, # new data set here!
         }
         for ex in ExperimentConfig.simulated_experiments:
             dataset[ex] = data_formatters.simulation.data_generator
         
         return dataset[self.experiment]()
 ```
-
+If the new data set is created
 
 ### Step 2:
 
 
-### Step 3:
+### Step 3: Run train.py
+
+To run churn data set without hyperparameter optimization
+
+```bash
+py -m train churn yes yes yes yes no 300 
+```
+
+
