@@ -31,9 +31,24 @@ Set up your environment using Python3.6.5 with the libraries depicted in ``requi
 ```python
 py -m pip install -r requirements.txt
 ```
-If required, please manually install ``gurobipy 9.1.0`` and provide your licence key.
+If required, please manually install ``gurobipy==9.1.0`` and provide your licence key.
 
 * **train.py**: Runs the experiments with specified models.
 
 ## How to Run Default Experiments:
+Our default experiments consists of credit scoring ``bank_credit`` problem and four synthetic setups ``ex1``, ``ex2``, ``ex3`` and ``ex4``.
+For privacy reasons, ``bank_credit`` data set is not uploaded. Please contact the authors for inquiries regarding this experiment.
 
+To train the models with default parameters, run:
+
+```bash
+py -m train expt_name use_cslr mip_wi mip ml hyperparam_opt time_limit output_folder 
+```
+
+``expt_name`` denotes the aforementioned default experiments.
+``use_cslr``, ``mip_wi``, ``mip`` and ``ml`` show whether to run the particular models on the specified ``expt_name``. (options are {``yes`` or``no``})
+``hyperparam_opt`` shows whether to use Bayesian Optimization for hyperparameter tuning. (options is {``yes`` or``no``})
+``time_limit`` is the time limit in seconds for ``mip`` and ``mip-wi``.
+``output_folder`` is the root folder in which experiment is saved. 
+
+## Customising Scripts for New Datasets:
