@@ -46,9 +46,8 @@ py -m train expt_name use_cslr mip_wi mip ml hyperparam_opt time_limit output_fo
 ```
 
 ``expt_name`` denotes the aforementioned default experiments.
-``use_cslr``, ``mip_wi``, ``mip`` and ``ml`` show whether to run the particular models on the specified ``expt_name``. (options are {``yes`` or``no``})
-``hyperparam_opt`` shows whether to use Bayesian Optimization for hyperparameter tuning. (options is {``yes`` or``no``})
-``time_limit`` is the time limit in seconds for ``mip`` and ``mip-wi``.
+``use_cslr``, ``mip_wi``, ``mip`` and ``ml`` show whether to run the particular models on the specified ``expt_name``, (options are {``yes`` or``no``}).
+``hyperparam_opt`` shows whether to use Bayesian Optimization for hyperparameter tuning, (options is {``yes`` or``no``}).
+``time_limit`` is the time limit in seconds for ``mip`` and ``mip_wi``.
 ``output_folder`` is the root folder in which experiment is saved. 
 
-## Customising Scripts for New Datasets:
