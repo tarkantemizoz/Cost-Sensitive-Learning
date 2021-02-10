@@ -23,7 +23,6 @@ Important modules are defined as following:
 * **data\_formatters**: Holds the data set specific 
 
 * **expt\_settings**: Holds the folder paths and specifies the experiment to work on.
-* **libs**: Contains the main libraries, including classes to manage hyperparameter optimisation (**hyperparam\_opt.py**), the main TFT network class (**tft\_model.py**), and general helper functions (**utils.py**)
 
 To reproduce the results:
 
