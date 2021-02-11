@@ -27,19 +27,44 @@ from bayes_opt.bayes_tree import bayes_tree
 from bayes_opt.bayes_xgboost import bayes_xgboost      
            
 class ml_models: 
-
+    """Machine learning algorithms for EDCS problems
+        
+    Attributes:
+        formatter: formatter for the specified experiment
+        expt: name of ml method
+        train_scores: a triple of: (normalized return, accuracy, weighted F score)
+            for train data
+        test_scores: a triple of: (normalized return, accuracy, weighted F score)
+            for test data
+        val_scores: a triple of: (normalized return, accuracy, weighted F score)
+            for validation data
+        x_train: features for train set
+        r_train: returns for train set
+        rmax_train: maximum returns for train set
+        y_train: labels for train set
+        Same applies for test and validation sets.
+    """
+    
     def __init__(self,
                  formatter,
                  train,
                  test,
                  valid=None
                 ):
+        """Organizes the data for machine learning algorithms.
+            
+        Args:
+            formatter: formatter for the specified experiment
+            train: holds the quadruple of: (features, returns, maximum returns, labels)
+                for train data
+            test: holds the quadruple of: (features, returns, maximum returns, labels)
+                for test data
+            valid: holds the quadruple of: (features, returns, maximum returns, labels)
+                for validation data
+        """
         
         self.formatter = formatter
-        self.bayes = self.formatter.bayes
-        self.fixed_params = self.formatter.get_experiment_params()        
-        self.scaler = self.fixed_params.get("scaler", False)        
-        self.xgsteps = 20
+        self._xgsteps = 20
         self.expt = "logistic"
         
         self.x_train = train[0]
@@ -59,8 +84,14 @@ class ml_models:
         self.val_scores = []
         
     def tree(self):
+        """Runs decision trees on the input.
+            
+        Returns:
+            The function that calculates the results.
+        """
         
-        if self.bayes == True:
+        # applying bayesian optimization
+        if self.formatter.bayes == True:
             
             bayes = bayes_tree(self.formatter , self.x_train, self.y_train, self.r_train)
             best_params_tree = bayes.bayes()
@@ -79,10 +110,11 @@ class ml_models:
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
                 return self.return_results(train_probs, test_probs)
-        
+    
+        # calling the default model
         else:                 
 
-            dt = DecisionTreeClassifier().fit(self.x_train, self.y_train)
+            dt = DecisionTreeClassifier(max_depth = 8).fit(self.x_train, self.y_train)
             train_probs = dt.predict_proba(self.x_train) 
             test_probs = dt.predict_proba(self.x_test) 
             
@@ -93,8 +125,14 @@ class ml_models:
                 return self.return_results(train_probs, test_probs)
     
     def logistic(self):
+        """Runs logistic regression on the input.
+            
+        Returns:
+            The function that calculates the results.
+        """
         
-        if self.scaler == True:
+        # calling the prespecified scaler, which depends on the experiment
+        if self.formatter.get_experiment_params().get("scaler", False) == True:
             if self.x_val is not None:
                 x_train, x_test, x_val = self.formatter.transform_inputs(self.x_train,
                                                                          self.x_test,
@@ -104,8 +142,9 @@ class ml_models:
                                                                   self.x_test)         
         else:
             x_train, x_test, x_val = self.x_train, self.x_test, self.x_val
-                  
-        if self.bayes == True:
+
+        # applying bayesian optimization
+        if self.formatter.bayes == True:
             
             bayes = bayes_logistic(self.formatter , x_train, self.y_train, self.r_train)
             best_params_logistic = bayes.bayes()
@@ -128,8 +167,9 @@ class ml_models:
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
                 return self.return_results(train_probs, test_probs)
-            
-        else:            
+
+                    # calling the default model
+        else:
             
             clf_fit = LogisticRegression().fit(x_train, self.y_train)        
             train_probs = clf_fit.predict_proba(x_train) 
@@ -142,8 +182,13 @@ class ml_models:
                 return self.return_results(train_probs, test_probs)
 
     def xgboost(self):
-
-        if self.bayes == True:
+        """Runs xgboost on the input.
+            
+        Returns:
+           The function that calculates the results.
+        """
+        # applying bayesian optimization
+        if self.formatter.bayes == True:
             bayes = bayes_xgboost(self.formatter , self.x_train, self.y_train, self.r_train)
             best_params_xgb = bayes.bayes()            
             param = {'eta' : best_params_xgb.get("eta", ""), 
@@ -156,7 +201,8 @@ class ml_models:
                     }                 
             model = xgb.train(param, xgb.DMatrix(self.x_train,
                                                  label=self.y_train),
-                              self.xgsteps)                      
+                              self._xgsteps
+                              )
             train_probs = model.predict(xgb.DMatrix(self.x_train, label=self.y_train))
             test_probs = model.predict(xgb.DMatrix(self.x_test, label=self.y_test))
             
@@ -164,26 +210,35 @@ class ml_models:
                 val_probs = model.predict(xgb.DMatrix(self.x_val, label=self.y_val)) 
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
-                return self.return_results(train_probs, test_probs) 
-            
+                return self.return_results(train_probs, test_probs)
+    
+        # calling the default model
         else:
 
             dtrain = xgb.DMatrix(self.x_train, label=self.y_train)
             dtest = xgb.DMatrix(self.x_test, label=self.y_test)  
-            param = {'objective': 'multi:softprob', 'num_class': self.r_train.shape[1]}
-            train_probs = xgb.train(param, dtrain, self.xgsteps).predict(dtrain)
-            test_probs = xgb.train(param, dtrain, self.xgsteps).predict(dtest)
+            param = {'objective': 'multi:softprob', 'num_class': self.r_train.shape[1],
+                     'max_depth': 8
+                    }
+            model = xgb.train(param, dtrain, self._xgsteps)
+            train_probs = model.predict(dtrain)
+            test_probs = model.predict(dtest)
                         
             if self.x_val is not None:
                 dval = xgb.DMatrix(self.x_val, label=self.y_val)
-                val_probs = xgb.train(param, dtrain, self.xgsteps).predict(dval)
+                val_probs = model.predict(dval)
                 return self.return_results(train_probs, test_probs, val_probs)
             else:
                 return self.return_results(train_probs, test_probs)   
            
 
     def result(self):
-                
+        """Returns the results.
+            
+        Returns:
+            Returns the results of the specified model.
+        """
+        
         if self.expt == "logistic":
             
             return self.logistic()
@@ -198,7 +253,18 @@ class ml_models:
         
      
     def return_results(self, train_probs, test_probs, val_probs=None):
-        
+        """Evaluates the model outputs.
+            
+        Args:
+            train_probs: probabilities of the classes - train set
+            test_probs: probabilities of the classes - test set
+            val_probs: probabilities of the classes - validation set
+            
+        Returns:
+            Triple of results for: (train, test, validation)
+            Results consist of normalized return, accuracy and weighted F score.
+        """
+
         test_return, test_outcome = test_learning(test_probs, self.r_test)
         train_return, train_outcome = test_learning(train_probs, self.r_train)
         test_return = test_return / sum(self.rmax_test)

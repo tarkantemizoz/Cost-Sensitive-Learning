@@ -16,7 +16,7 @@
 import pandas as pd
 import numpy as np
 
-def test_learning(probs, returns):   
+def test_learning(probs, returns):
     outcome = np.argmax(probs, 1)
     gain = sum(returns[np.arange(len(returns)), np.argmax(probs,1)])
     return gain, outcome
@@ -95,7 +95,7 @@ class write_results:
             self.mip_perf = pd.concat([self.mip_perf,df])
 
         self.index += 1         
-        
+    
     def print_results(self):
         
         self.methods = list(set(self.methods))
@@ -104,6 +104,7 @@ class write_results:
         self.train_df.to_csv(self.results_path+"_train")
         average_train = pd.DataFrame()
         average_test = pd.DataFrame()
+        print(self.methods)
         
         for m in self.methods:
             

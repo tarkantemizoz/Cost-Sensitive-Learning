@@ -20,22 +20,24 @@ import data_formatters.simulation
 import data_formatters.bank
 
 class ExperimentConfig(object):
-    
     """Defines experiment configs and paths to outputs.
-       Attributes:
+        
+    Attributes:
         root_folder: Root folder to contain all experimental outputs.
         experiment: Name of experiment to run.
         data_folder: Folder to store data for experiment.
         model_folder: Folder to store models.
         results_folder: Folder to store results.
+        simulated_experiments: Name of the simulated experiments.
+        default_experiments: Name of all experiments
     """
+    
     simulated_experiments = ['ex1', 'ex2', 'ex3', 'ex4']
     default_experiments = ['bank_credit', 'ex1', 'ex2', 'ex3', 'ex4']
 
     def __init__(self, experiment='ex1', root_folder=None):
-        
-          
         """Creates configs based on default experiment chosen.
+            
         Args:
           experiment: Name of experiment.
           root_folder: Root folder to save all outputs of training.
@@ -74,8 +76,9 @@ class ExperimentConfig(object):
 
     def make_data_formatter(self):
         """Gets a data formatter object for experiment.
+            
         Returns:
-          Default DataFormatter per experiment.
+          specified dataformatter.
         """
         dataset = {       
             'bank_credit': data_formatters.bank.bank_credit

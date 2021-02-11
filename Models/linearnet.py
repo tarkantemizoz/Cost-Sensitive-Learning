@@ -1,5 +1,5 @@
 # coding: utf-8
-# Copyright 2020 Mert Yuksekgonul, Tarkan Temizoz
+# Copyright 2020 Tarkan Temizoz
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +17,26 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class LinearNet(nn.Module): 
+class LinearNet(nn.Module):
+    """ A helper class to create the network of Cost-sensitive Logistic Regression
+        
+    Attributes:
+        input_size: size of the input.
+        dnn_layers: number of layers.
+        hidden_size: list of the size of the hidden layers.
+        n_outputs: number of outputs in the output layer.
+        batch_norm: whether to apply batch normalization to the network.
+        relu: activation function between layers.
+        action_max: activation function on the output layer.
+    """
+    
     def __init__(self, config):
+        """Initialises the network.
+            
+        Args:
+            config: Configuration of the network.
+        """
+        
         super(LinearNet, self).__init__()
         self.input_size = config["n_inputs"]
         self.dnn_layers = config.get("dnn_layers", 1)        
@@ -36,8 +54,18 @@ class LinearNet(nn.Module):
             if self.batch_norm == True:
                 self.add_module('batch_' + str(i), nn.BatchNorm1d(
                     self.n_outputs if (i+1 == self.dnn_layers) else self.hidden_size[i]
-                ))        
-    def forward(self, X):       
+                ))
+    
+    def forward(self, X):
+        """Forward pass of the network.
+            
+        Args:
+            X: input of the network.
+            
+        Returns:
+            Triple of Tensors for: (decision variables, probabilities, logits)
+        """
+        M = 1000
         logits = getattr(self, 'layer_'+str(0))(X)
         if self.batch_norm == True:
             logits = getattr(self, 'batch_'+str(0))(logits)
@@ -46,6 +74,7 @@ class LinearNet(nn.Module):
             logits = getattr(self, 'layer_'+str(i+1))(logits)
             if self.batch_norm == True:
                 logits = getattr(self, 'batch_'+str(i+1))(logits)
-        output = self.action_max((logits)/0.001)
+        output = self.action_max((logits)*M)
         output_probs = self.action_max(logits)
+        
         return output, output_probs, logits
