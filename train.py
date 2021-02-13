@@ -124,8 +124,8 @@ def main(
                     train_scores, test_scores, _ = ml_model.result()
                     writer.collect_results(n, m,train_scores, test_scores)
                     
-        #print("Printing test results.....")
-        #print(writer.average_results)
+        print("Printing average results.....")
+        print(writer.average_results)
         #print(writer.mip_perf)
         #writer.print_results()
             
