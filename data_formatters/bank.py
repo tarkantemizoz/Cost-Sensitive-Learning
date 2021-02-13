@@ -23,9 +23,26 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 GenericDataFormatter = data_formatters.base.GenericDataFormatter
 
 class bank_credit(GenericDataFormatter):
+    """A helper class to simulate data for Cost Sensitive Learning"
+        
+    Attributes:
+        params: experiment parameters
+        scaler: whether to apply scaling
+        validation: whether to have seperate validation folds
+        testing: whether to have testing data
+        features: features of the bank credit data
+        returns: returns of the bank credit data
+        outcomes: labels of the bank credit data
+        rmax: maximum returns of the bank credit data
+        seed: seed to generate the data set
+        train: training data consisting of features, returns, maximum returns, labels
+        validation: validation data consisting of features, returns, maximum returns, labels
+        test: testing data consisting of features, returns, maximum returns, labels
+    """
     
     def __init__(self):
-        
+        """Reads the data and initializes the experiment"""
+
         self.params = self.get_experiment_params()
         self.scaler = self.params.get("scaler", False)
         self.validation = self.params["validation"]
@@ -35,13 +52,12 @@ class bank_credit(GenericDataFormatter):
         self.returns = pickle.load(open("datasets/bank_returns","rb"))
         self.outcomes = np.argmax(self.returns, 1)
         self.rmax = np.amax(self.returns, 1)
-        self.seed = 99
+        self.seed = 42
         self.train = []
         self.test = []     
         self.valid = []      
         
     def split_data(self):
-        
         """Split Data: train and test.
         """
         
@@ -74,11 +90,12 @@ class bank_credit(GenericDataFormatter):
 
 
     def transform_inputs(self, train, test=None, valid=None):
-        
         """Performs feature transformations.
         This includes standardization of data.
+        
         Args:
           train, test, valid: Data to transform.
+          
         Returns:
           Transformed data.
         """        

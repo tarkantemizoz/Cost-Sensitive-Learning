@@ -17,14 +17,42 @@ import pandas as pd
 import numpy as np
 
 def test_learning(probs, returns):
+    """Function to calculate total returns
+        
+    Args:
+        probs, returns: probabilities, returns
+        
+    Returns:
+        gain, outcome: total returns, classes with the greatest returns for each instance
+    """
+    
     outcome = np.argmax(probs, 1)
     gain = sum(returns[np.arange(len(returns)), np.argmax(probs,1)])
+    
     return gain, outcome
 
 class write_results:
+    """A helper class to simulate data for Cost Sensitive Learning"
+        
+    Attributes:
+        formatter: formatter of the specified experiment
+        test_df: dataframe to hold test results
+        train_df: dataframe to hold train results
+        val_df: dataframe to hold validation results
+        mip_perf: dataframe to hold mip and mip-wi results seperately
+        average_results: dataframe to hold average results
+        mip_avg_perf: dataframe to hold average results of mip and mip-wi
+        methods: list to store the methods
+        validation: whether there are results of the validation folds
+    """
     
     def __init__(self, formatter):
+    """Initializes the dataframes"
         
+    Args:
+        formatter: formatter of the specified experiment
+    """
+            
         self.formatter = formatter
         self.test_df = pd.DataFrame()
         self.train_df = pd.DataFrame()        
@@ -43,7 +71,16 @@ class write_results:
                         test_scores,
                         val_scores=None,
                        ):   
+        """Prepare the results to be printed
             
+        Args:
+            repeat num: number of repeat
+            method: name of the model results belong
+            train_scores: train results
+            test_scores: test results
+            val_scores: validation results
+        """
+
         self.methods.append(method)
         
         df = {'Repeat_Num': repeat_num,
@@ -97,14 +134,14 @@ class write_results:
         self.index += 1         
     
     def print_results(self):
-        
+        """Prints the results."""
+
         self.methods = list(set(self.methods))
         self.results_path = self.formatter.results_path
         self.test_df.to_csv(self.results_path+"_test")
         self.train_df.to_csv(self.results_path+"_train")
         average_train = pd.DataFrame()
         average_test = pd.DataFrame()
-        print(self.methods)
         
         for m in self.methods:
             

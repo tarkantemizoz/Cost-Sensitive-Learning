@@ -19,10 +19,23 @@ import data_formatters.base
 GenericDataFormatter = data_formatters.base.GenericDataFormatter
 
 class data_generator(GenericDataFormatter):
-    """ A helper class to simulate data for Cost Sensitive Learning"""
+    """A helper class to simulate data for Cost Sensitive Learning"
+        
+    Attributes:
+        expt_name: name of the experiment
+        params: experiment parameters
+        scaler: whether to apply scaling
+        validation: whether to have seperate validation folds
+        testing: whether to have testing data
+        seed: seed to generate the data set
+        train: training data consisting of features, returns, maximum returns, labels
+        validation: validation data consisting of features, returns, maximum returns, labels
+        test: testing data consisting of features, returns, maximum returns, labels
+    """
     
     def __init__(self):
-
+        """Initializes attributes"""
+        
         self.expt_name = 'ex1'
         self.params = self.get_experiment_params()
         self.scaler = False
@@ -34,6 +47,7 @@ class data_generator(GenericDataFormatter):
         self.valid = []  
         
     def split_data(self):
+        """Calls data generation function and splits the data into train and test """
 
         self.create_dataset()
               
@@ -41,11 +55,12 @@ class data_generator(GenericDataFormatter):
         self.train = [self.x_train, self.r_train, self.rmax_train, self.y_train]  
     
     def transform_inputs(self, train, test=None, valid=None):
-        
         """Performs feature transformations.
         This includes standardization of data.
+        
         Args:
           train, test, valid: Data to transform.
+          
         Returns:
           Transformed data.
         """
@@ -59,6 +74,9 @@ class data_generator(GenericDataFormatter):
             return train
 
     def create_dataset(self):
+        """Creates all elements of the dataset:
+            features, returns, maximum returns and labels
+        """
         
         self.simul_params = self.get_simulation_params()[self.expt_name]
         self.n = int(self.simul_params["n"])
@@ -99,6 +117,14 @@ class data_generator(GenericDataFormatter):
         self.seed += 1
 
     def returns(self, y):
+        """Generate return values and labels
+            
+        Args:
+            y: outcomes to determine which class is to be assigned the greatest return
+            
+        Returns:
+            returns and labels
+        """
         
         returns = np.zeros((len(y),self.num_class))
         outcomes = np.argmax(y, 1)
@@ -141,6 +167,14 @@ class data_generator(GenericDataFormatter):
         return returns, outcomes.astype(int)     
     
     def decision(self, arr):        
+        """Calculates the outcomes based on the baseline and effect functions
+            
+        Args:
+            arr: features
+            
+        Returns:
+            outcomes
+        """
         
         y = np.zeros((len(arr),self.num_class))
         
@@ -199,7 +233,7 @@ class data_generator(GenericDataFormatter):
         fixed_params = {
             'n_epochs': 1000,
             'device': "cpu",
-            'num_repeats': 1,
+            'num_repeats': 50,
             'testing' : True,
             'validation': False,
             'scaler': False
@@ -222,13 +256,13 @@ class data_generator(GenericDataFormatter):
         return model_params
 
     def simulation_params(self):
-        """Returns default simulation parameters."""
+        """Returns experiment specific parameters."""
 
         params_simul = {}
         params_simul['ex1'] = {
             'num_class': 2,
             'num_features': 15,
-            'noise': 0.5,
+            'noise': 1,
             'n': 1000,
             'n_test': 20000,
         }
@@ -236,13 +270,13 @@ class data_generator(GenericDataFormatter):
             'num_class': 2,
             'num_features': 25,
             'noise': 1,
-            'n': 500,
+            'n': 3000,
             'n_test': 20000
         }
         params_simul['ex3'] = {
             'num_class': 3,
             'num_features': 15,
-            'noise': 0.5,
+            'noise': 1,
             'n': 5000,
             'n_test': 20000
         }
@@ -250,7 +284,7 @@ class data_generator(GenericDataFormatter):
             'num_class': 3,
             'num_features': 25,
             'noise': 1,
-            'n': 5000,
+            'n': 1000,
             'n_test': 20000
         }             
                                 
@@ -260,7 +294,6 @@ class data_generator(GenericDataFormatter):
         return params_simul                               
                                 
     def get_simulation_params(self):
-                                
         """Checks simulation parameters for experiments."""
 
         required_keys = [
@@ -282,7 +315,7 @@ class data_generator(GenericDataFormatter):
         """Returns default model parameters."""
 
         bayes_params = {
-            'bayes_trials': 5,
+            'bayes_trials': 50,
             'batch_size_bayes': None,
             'dnn_layers_bayes': None,           
             'inner_cval': True,

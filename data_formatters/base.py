@@ -28,7 +28,6 @@ import pickle
 from sklearn.model_selection import StratifiedKFold
 
 class GenericDataFormatter(abc.ABC):
-
     """Abstract base class for all data formatters.
     User can implement the abstract methods below to perform dataset-specific
     manipulations.
@@ -100,7 +99,12 @@ class GenericDataFormatter(abc.ABC):
         return train, test, valid
 
     def save_models(self, n, expt, simulated_expt):
-        """Save the data for experiments."""
+        """Save the data for experiments.
+        Args:
+            n, expt, simulated_expt =
+            # of repeat, name of the experiment, name of the simulated experiments
+        """
+        
         for k in simulated_expt:
             if expt == k:
                 data_path = self.data_folder+self.expt_path
