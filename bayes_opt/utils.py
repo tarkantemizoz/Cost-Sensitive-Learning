@@ -47,11 +47,6 @@ class write_results:
     """
     
     def __init__(self, formatter):
-    """Initializes the dataframes"
-        
-    Args:
-        formatter: formatter of the specified experiment
-    """
             
         self.formatter = formatter
         self.test_df = pd.DataFrame()
