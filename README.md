@@ -26,18 +26,22 @@ Important modules are defined as following:
 
 To reproduce the results:
 
-Set up your environment using Python3.6.5 with the libraries depicted in ``requirements.txt``.
+Set up your environment using Python3 <3.8 with the libraries depicted in ``requirements.txt``.
 
 ```python
 py -m pip install -r requirements.txt
 ```
-If required, please manually install ``gurobipy==9.1.0`` and provide your licence key.
+Please manually install ``gurobipy`` and provide your licence key.
+```python
+py -m pip install -i https://pypi.gurobi.com gurobipy
+```
 
 * **train.py**: Runs the experiments with specified models.
 
 ## How to Run Default Experiments:
 Our default experiments consists of credit scoring ``bank_credit`` problem and four synthetic setups ``ex1``, ``ex2``, ``ex3`` and ``ex4``.
 For privacy reasons, ``bank_credit`` data set is not uploaded. Please contact the authors for inquiries regarding this experiment.
+In the paper, only ``ex2`` and ``ex4`` experiments are used as synthetic data sets.
 
 To train the models with default parameters, run:
 
