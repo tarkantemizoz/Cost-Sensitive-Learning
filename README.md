@@ -97,11 +97,11 @@ python3 -m train $new_example
 
 ## How to Customize Scripts for new synthetic Data Sets
 
-To create to new synthetic data sets, it requires some modifications in simulation.py and config updates. 
+To create a new synthetic data set, e.g. 'ex5', it requires some modifications in simulation.py and config updates. 
 
 ### Step 1: Update simulation.py
 
-Add baseline and effect functions for the experiment 'ex5':
+Add baseline and effect functions for the experiment 'ex5' in decision function:
 ```python
 def decision(self, arr):        
     """Calculates the outcomes based on the baseline and effect functions
