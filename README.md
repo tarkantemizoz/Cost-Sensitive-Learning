@@ -1,7 +1,5 @@
 # A Mixed-Integer Programming Approach To Example-dependent Cost-sensitive Learning
 
-Authors: Tarkan Temizoz, Mustafa G. Baydogan, Mert Yuksekgonul
-
 This research is conducted as the Master's Thesis of Tarkan Temizoz.
 Query the authors for the full results of this work. To reproduce them, please follow the instructions below.
 
@@ -19,39 +17,34 @@ This repository contains the source code of the proposed models for Example-depe
 Important modules are defined as following:
 
 * **Models**: Contains the scripts of the proposed methods and other machine learning appraoaches.
-* **bayes\_opt-utils**: Contains the scripts for hyperparameter tuning with Bayesian Optimization and a helper class to write the results.
+* **utils**: Contains the scripts for hyperparameter tuning with Bayesian Optimization and a helper class to write the results.
 * **data\_formatters**: Holds the data set specific experiment formats, such as functions for normalization, model parameters etc. Also stores the parent class (see **base.py**) every experiment inherits from.
 * **datasets**: Stores the data sets, the features and the returns.
 * **expt\_settings**: Holds the folder paths and specifies the experiment to work on.
 
 To reproduce the results:
 
-Set up your environment using Python3 <3.8 with the libraries depicted in ``requirements.txt``.
+Set up your directory to project directory, and call:
 
-```python
-python3 -m pip install -r requirements.txt
 ```
-Please manually install ``gurobipy`` and ``xgboost`` and provide your licence key for Gurobi.
-```python
-python3 -m pip install -i https://pypi.gurobi.com gurobipy
+conda env create -f environment.yml
 ```
-Follow to instructions in the [link](https://xgboost.readthedocs.io/en/latest/build.html) to install ``xgboost`` into your environment.
+Please manually obtain and provide your licence key for Gurobi.
 
 * **train.py**: Runs the experiments with specified models.
 
 ## How to Run Default Experiments:
 Our default experiments consists of credit scoring ``bank_credit`` problem and four synthetic setups ``ex1``, ``ex2``, ``ex3`` and ``ex4``.
-For privacy reasons, ``bank_credit`` data set is not uploaded. Please contact the authors for inquiries regarding this experiment.
 In the research, only ``ex2`` and ``ex4`` experiments are used as synthetic data sets.
 
 To train the models with default parameters, run:
 
-```bash
-python3 -m train $expt_name $use_cslr $mip_wi $mip ml $hyperparam_opt $time_limit $output_folder 
+```
+python -m train expt_name edcs ml cost_cla hyperparam_opt time_limit output_folder 
 ```
 
 ``expt_name`` denotes the aforementioned default experiments.
-``use_cslr``, ``mip_wi``, ``mip`` and ``ml`` show whether to run the particular models on the specified ``expt_name``, (options are {``yes`` or``no``}).
+``edcs``, ``ml`` and ``cost_cla`` show whether to run the particular models on the specified ``expt_name``, (options are {``yes`` or``no``}).
 ``hyperparam_opt`` shows whether to use Bayesian Optimization for hyperparameter tuning, (options is {``yes`` or``no``}).
 ``time_limit`` is the time limit in seconds for ``mip`` and ``mip_wi``.
 ``output_folder`` is the root folder in which experiment is saved. 
@@ -68,7 +61,7 @@ Create a new python file new_example.py in ``data_formatters``. It should contai
 ### Step 2: Update configs.py
 Add a name for your new experiement to the ``default_experiments`` attribute in ``expt_settings.configs.ExperimentConfig`` (e.g. ``example``).
 ```python
-default_experiments = ['bank_credit', 'ex1', 'ex2', 'ex3', 'ex4', 'new_example']
+default_experiments = ['bank_credit', 'creditcard', 'betting', 'ex1', 'ex2', 'ex3', 'ex4']
 ```
 
 Add the root of the new formatter in the make_data_formatter function:
@@ -92,7 +85,7 @@ def make_data_formatter(self):
 
 Call train.py with the new data set.
 ```bash
-python3 -m train $new_example
+python3 -m train new_example
 ```
 
 ## How to Customize Scripts for new synthetic Data Sets
@@ -182,13 +175,12 @@ def simulation_params(self):
 Add the name of the new experiement 'ex5' to the ``default_experiments`` and ``simulated_experiments`` attributes in ``expt_settings.configs.ExperimentConfig``.
 ```python
 simulated_experiments = ['ex1', 'ex2', 'ex3', 'ex4', 'ex5]
-default_experiments = ['bank_credit', 'ex1', 'ex2', 'ex3', 'ex4', 'ex5']
+default_experiments = ['bank_credit', 'creditcard', 'betting', 'ex1', 'ex2', 'ex3', 'ex4']
 ```
 
 ### Step 3: Run the new experiment 
 
 Call train.py with the new synthetic data set.
-```bash
-python3 -m train $ex5
-
+```
+python -m train ex5
 ```

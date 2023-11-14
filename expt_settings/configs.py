@@ -1,23 +1,9 @@
-# coding: utf-8
-# Copyright 2020 Tarkan Temizoz
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 import os
 
 import data_formatters.simulation
 import data_formatters.bank
+import data_formatters.bet
+import data_formatters.credit
 
 class ExperimentConfig(object):
     """Defines experiment configs and paths to outputs.
@@ -33,7 +19,7 @@ class ExperimentConfig(object):
     """
     
     simulated_experiments = ['ex1', 'ex2', 'ex3', 'ex4']
-    default_experiments = ['bank_credit', 'ex1', 'ex2', 'ex3', 'ex4']
+    default_experiments = ['bank_credit', 'creditcard', 'betting', 'ex1', 'ex2', 'ex3', 'ex4']
 
     def __init__(self, experiment='ex1', root_folder=None):
         """Creates configs based on default experiment chosen.
@@ -81,7 +67,9 @@ class ExperimentConfig(object):
           specified dataformatter.
         """
         dataset = {       
-            'bank_credit': data_formatters.bank.bank_credit
+            'bank_credit': data_formatters.bank.bank_credit,
+            'betting': data_formatters.bet.betting,
+            'creditcard': data_formatters.credit.creditcard
         }
         for ex in ExperimentConfig.simulated_experiments:
             dataset[ex] = data_formatters.simulation.data_generator

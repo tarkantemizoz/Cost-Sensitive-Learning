@@ -1,13 +1,14 @@
-import numpy as np
-import pickle
 import data_formatters.base
 
-from sklearn.model_selection import train_test_split
+import os
+import feather
+import numpy as np
+
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 GenericDataFormatter = data_formatters.base.GenericDataFormatter
 
-class bank_credit(GenericDataFormatter):
+class creditcard(GenericDataFormatter):
     """A helper class to simulate data for Cost Sensitive Learning"
         
     Attributes:
@@ -32,12 +33,16 @@ class bank_credit(GenericDataFormatter):
         self.scaler = self.params.get("scaler", False)
         self.validation = self.params["validation"]
         self.testing = self.params["testing"]
-        
-        self.features = pickle.load(open("datasets/bank_features","rb"))
-        self.returns = pickle.load(open("datasets/bank_returns","rb"))
-        self.outcomes = np.argmax(self.returns, 1)
-        self.rmax = np.amax(self.returns, 1)
-        self.seed = 42
+ 
+        os.chdir('/Users/20214773/source/repos/CSLR-Revised/datasets/creditdata')
+        directory = '/Users/20214773/source/repos/CSLR-Revised/datasets/creditdata'
+
+        self.data = []
+        for filename in os.listdir(directory):
+            DF = feather.read_dataframe(filename)
+            self.data.append(DF)
+
+        self.seed = 30
         self.train = []
         self.test = []     
         self.valid = []      
@@ -45,33 +50,17 @@ class bank_credit(GenericDataFormatter):
     def split_data(self):
         """Split Data: train and test.
         """
-        
-        if self.testing == True:
-                             
-            (self.x_train,
-             x_test,
-             self.y_train,
-             y_test,
-             self.r_train,
-             r_test,
-             self.rmax_train,
-             rmax_test) = train_test_split(self.features,
-                                           self.outcomes,
-                                           self.returns,
-                                           self.rmax,
-                                           test_size=0.2,
-                                           random_state=self.seed)
-            self.test = [x_test, r_test, rmax_test, y_test]
-            self.seed += 1
-            
-        else:
-            
-            (self.x_train, self.y_train, self.r_train, self.rmax_train) = (self.features,
-                                                                           self.outcomes,
-                                                                           self.returns,
-                                                                           self.rmax)   
-  
+        (self.x_train, self.y_train, self.r_train, self.rmax_train) = (self.data[self.seed].to_numpy(),
+                                                                       self.data[self.seed+2].to_numpy().astype(int),
+                                                                       self.data[self.seed+1].to_numpy(),
+                                                                       np.amax(self.data[self.seed+1].to_numpy(),1))        
+        (self.x_test, self.y_test, self.r_test, self.rmax_test) = (self.data[self.seed-30].to_numpy(),
+                                                                   self.data[self.seed+2-30].to_numpy().astype(int),
+                                                                   self.data[self.seed+1-30].to_numpy(),
+                                                                   np.amax(self.data[self.seed+1-30].to_numpy(),1))   
         self.train = [self.x_train, self.r_train, self.rmax_train, self.y_train]
+        self.test = [self.x_test, self.r_test, self.rmax_test, self.y_test]
+        self.seed += 3
 
     def transform_inputs(self, train, test=None, valid=None):
         """Performs feature transformations.
@@ -82,8 +71,7 @@ class bank_credit(GenericDataFormatter):
           
         Returns:
           Transformed data.
-        """        
-        
+        """ 
         if self.scaler == False:
             raise ValueError('Scaler has not been set!')    
             
@@ -108,13 +96,12 @@ class bank_credit(GenericDataFormatter):
 
         fixed_params = {
             'n_epochs': 1000,
-            'n_steps': 1000,
+            'n_steps': 10,
             'device': "cpu",
-            'num_repeats': 1,
-            'testing' : False,
-            'validation': True,
-            'n_splits': 3,
-            'scaler': True
+            'num_repeats': 3, # do not change this
+            'testing' : True, # do not change this
+            'validation': False, # do not change this
+            'scaler': False
         }
 
         return fixed_params
@@ -124,8 +111,8 @@ class bank_credit(GenericDataFormatter):
 
         model_params = {
             'dnn_layers': 1,
-            'learning_rate': 0.001,
-            'batch_size': 32000,
+            'learning_rate': 0.01,
+            'batch_size': 5120,
             'batch_norm': False
         }
 
@@ -135,8 +122,9 @@ class bank_credit(GenericDataFormatter):
         """Returns default model parameters."""
 
         bayes_params = {
-            'bayes_trials': 10,      
+            'bayes_trials': 100,      
             'n_val_splits': 10
         }
 
         return bayes_params
+

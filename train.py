@@ -1,31 +1,13 @@
-# coding: utf-8
-# Copyright 2020 Tarkan Temizoz
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 """Trains CSLR based on a defined set of parameters.
     Uses default parameters supplied from the configs file to train a EDCS model from
     scratch.
 Usage:
-    py -m train {expt_name} {use_cslr} {mip_wi} {mip} {ml} {hyperparam_opt}
-    {time_limit} {output_folder}
+    python -m train {expt_name} {edcs} {ml} {cost_cla} {hyperparam_opt} {time_limit} {output_folder}
 Command line args:
     expt_name: Name of dataset/experiment to train.
-    use_cslr: Whether to use Cost-Sensitive Logistic Regression.
-    mip_wi: Whether to use Mixed-Integer Programming with Initial Solution.
-    mip: Whether to use Mixed-Integer Programming.
+    edcs: Whether to use EDCS learning algorithms.
     ml: Whether to use state-of-the-art Machine Learning models.
+    cost_cla: Whether to use Costcla algorithms.
     hyperparam_opt: Whether to use Bayesian Optimization for hyperparameter tuning.
     time_limit: Time limit for MIP models.
     output_folder: Root folder in which experiment is saved.
@@ -38,15 +20,14 @@ import expt_settings.configs
 
 from Models.cslr import cslr
 from Models.ml import ml_models
-
-from bayes_opt.utils import write_results
+from utils.utils import write_results
 
 ExperimentConfig = expt_settings.configs.ExperimentConfig
 
 def main(
         expt_name,
         edcs_methods,
-        use_ml,
+        ml_methods,
         data_formatter
     ):
     """Trains cslr based on defined model params.
@@ -54,8 +35,8 @@ def main(
       Args:
         expt_name: Name of experiment.
         edcs_methods: List of EDCS solving approaches.
-        use_ml: Whether to use state-of-the-art Machine Learning models.
-        data_formatter: Dataset-specific data fromatter
+        ml_methods: List of machine learning approaches.
+        data_formatter: Dataset-specific data fromatter.
     """
     
     if not isinstance(data_formatter, data_formatters.base.GenericDataFormatter):
@@ -64,9 +45,11 @@ def main(
             "AbstractDataFormatter! Type={}".format(type(data_formatter)))
     
     print("*** Training from defined parameters for {} ***".format(expt_name))
-    
-    ml_methods = ["tree", "xgboost", "logistic"]
 
+    params = data_formatter.get_fixed_params()
+    for k in params:
+        print("{}: {}".format(k, params[k])) 
+        
     params = data_formatter.get_default_model_params()
     for k in params:
         print("{}: {}".format(k, params[k]))  
@@ -83,58 +66,52 @@ def main(
         
         if data_formatter.params["validation"] == True:
 
-            data_formatter.perform_validation(n)                    
+            data_formatter.perform_validation()                    
 
-            for split in range(data_formatter.n_splits):
-                
+            for split in range(data_formatter.n_splits):             
                 print("***Loading & splitting data***")
                 train, test, valid = data_formatter.load_data(split)
-                model = cslr(data_formatter, train, test, valid)
                 
                 # running edcs learning methods and printing the results
+                model = cslr(data_formatter, train, test, valid)
                 for m in edcs_methods:
                     model.expt = m
                     train_scores, test_scores, val_scores = model.result()
                     writer.collect_results(n, m, train_scores, test_scores, val_scores)
                 
                 # running other machine learning methods and printing the results
-                if use_ml == "yes":
-                    ml_model = ml_models(data_formatter, train, test, valid)
-                    for m in ml_methods:
-                        ml_model.expt = m
-                        train_scores, test_scores, val_scores = ml_model.result()
-                        writer.collect_results(n, m, train_scores, test_scores, val_scores)
+                ml_model = ml_models(data_formatter, train, test, valid)
+                for m in ml_methods:
+                    ml_model.expt = m
+                    train_scores, test_scores, val_scores = ml_model.result()
+                    writer.collect_results(n, m, train_scores, test_scores, val_scores)
                         
         else:
             print("***Loading & splitting data***")
             train, test, _ = data_formatter.load_data()
-            model = cslr(data_formatter, train, test)
             
             # running edcs learning methods and printing the results
+            model = cslr(data_formatter, train, test)
             for m in edcs_methods:
                 model.expt = m
                 train_scores, test_scores, _ = model.result()
                 writer.collect_results(n, m, train_scores, test_scores)
             
-            # running other machine learning methods and printing the results
-            if use_ml == "yes":
-                ml_model = ml_models(data_formatter, train, test)
-                for m in ml_methods:
-                    ml_model.expt = m
-                    train_scores, test_scores, _ = ml_model.result()
-                    writer.collect_results(n, m,train_scores, test_scores)
-
+            #running other machine learning methods and printing the results
+            ml_model = ml_models(data_formatter, train, test)
+            for m in ml_methods:
+                ml_model.expt = m
+                train_scores, test_scores, _ = ml_model.result()
+                writer.collect_results(n, m, train_scores, test_scores)
+                                           
         writer.print_results()
         print("Printing average results.....")
         print(writer.average_results)
-        #print(writer.mip_perf)
         
-            
-    #print(writer.train_df)         
-    print("Printing average results.....")
-    print(writer.average_results)
-    #print("Printing mip performance results.....")
-    #print(writer.mip_avg_perf)
+        if "mip_wi" in edcs_methods or "mip" in edcs_methods:
+            print("Printing mip performance results.....")
+            print(writer.mip_perf)      
+          
 
 if __name__ == "__main__":
 
@@ -149,33 +126,17 @@ if __name__ == "__main__":
             metavar="e",
             type=str,
             nargs="?",
-            default="ex1",
+            default="bank_credit",
             choices=datasets,
             help="Dataset Name. Default={}".format(",".join(datasets)))            
         parser.add_argument(
-            "cslr",
-            metavar="c",
+            "edcs",
+            metavar="edcs",
             type=str,
             nargs="?",
             choices=["yes", "no"],            
             default="yes",
-            help="Whether to use Cost Sensitive Logistic Learning") 
-        parser.add_argument(
-            "mip_wi",
-            metavar="w",
-            type=str,
-            nargs="?",
-            choices=["yes", "no"],            
-            default="no",
-            help="Whether to use MIP-WI")
-        parser.add_argument(
-            "mip",
-            metavar="m",
-            type=str,
-            nargs="?",
-            choices=["yes", "no"],            
-            default="no",
-            help="Whether to use MIP")        
+            help="Whether to use our EDCS algorithms") 
         parser.add_argument(
             "ml",
             metavar="ml",
@@ -183,7 +144,15 @@ if __name__ == "__main__":
             nargs="?",
             choices=["yes", "no"],            
             default="no",
-            help="Whether to use ML algorithms")                            
+            help="Whether to use ML algorithms")        
+        parser.add_argument(
+            "cost_cla",
+            metavar="cost_cla",
+            type=str,
+            nargs="?",
+            choices=["yes", "no"],            
+            default="no",
+            help="Whether to use CostCla algorithms")                            
         parser.add_argument(
             "hyperparam_opt",
             metavar="h",
@@ -197,7 +166,7 @@ if __name__ == "__main__":
             metavar="tm",
             type=int,
             nargs="?",
-            default=100,
+            default=10,
             help="Time Limit")               
         parser.add_argument(
             "output_folder",
@@ -212,16 +181,15 @@ if __name__ == "__main__":
         folder = None if args.output_folder == "." else args.output_folder
 
         return (args.expt_name,
-                args.cslr,
-                args.mip_wi,
-                args.mip,
+                args.edcs,
                 args.ml,
+                args.cost_cla,
                 args.hyperparam_opt,
                 args.time_limit,
                 folder
                )
 
-    expt_name, use_cslr, mip_wi, mip, ml, hyperparam_opt, time_limit, folder = get_args()
+    expt_name, edcs, ml, cost_cla, hyperparam_opt, time_limit, folder = get_args()
     
     config = ExperimentConfig(expt_name, folder)
     formatter = config.make_data_formatter()
@@ -232,20 +200,38 @@ if __name__ == "__main__":
     formatter.results_folder = config.results_folder
     formatter.time_limit = time_limit
     formatter.bayes = (True if hyperparam_opt == "yes" else False)
-    
-    edcs_methods = []
-    if use_cslr == "yes":
-        edcs_methods.append("cslr")
-    if mip_wi == "yes":
-        edcs_methods.append("mip_wi")
-    if mip == "yes":
-        edcs_methods.append("mip")
+    use_edcs = (True if edcs == "yes" else False)
+    use_ml = (True if ml == "yes" else False)
+    use_cost_cla = (True if cost_cla == "yes" else False)
 
+    edcs_methods = []
+    ml_methods = []
+    
+    if (use_edcs):  
+        edcs_methods.append("cslr")
+        edcs_methods.append("mip")
+        edcs_methods.append("mip_wi")
+    
+    if (use_ml):
+        # ml_methods.append("logistic")
+        # ml_methods.append("mip_logistic")
+        # ml_methods.append("tree")       
+        # ml_methods.append("xgboost")
+        # ml_methods.append("svm")
+        # ml_methods.append("mip_svm")    
+        # ml_methods.append("svm_cost")    
+        # ml_methods.append("mip_svm_cost")    
+        ml_methods = ["svm_cost"]
+        
+    if (use_cost_cla):
+        costcla_methods = ["tree_costcla", "rf_costcla", "rp_costcla", "pasting_costcla", "bagging_costcla"]
+        ml_methods.append(costcla_methods)
+       
     # For new experiments customise inputs to main() .
     main(
         expt_name=expt_name,
         edcs_methods=edcs_methods,
-        use_ml=ml,
+        ml_methods=ml_methods,
         data_formatter=formatter
     ) 
 

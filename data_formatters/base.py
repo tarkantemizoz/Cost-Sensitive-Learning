@@ -1,30 +1,9 @@
-# coding: utf-8
-# Copyright 2020 Tarkan Temizoz
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""Default data formatting functions for experiments.
-For new datasets, inherit form GenericDataFormatter and implement
-all abstract functions.
-These dataset-specific methods:
-1) Perform the necessary input feature engineering & normalisation steps
-2) Are responsible for train, validation and test splits
-"""
-
 import os
 import abc
 import pickle
+import pandas as pd
 
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import StratifiedKFold
 
 class GenericDataFormatter(abc.ABC):
@@ -43,17 +22,18 @@ class GenericDataFormatter(abc.ABC):
         """Performs the default train and test splits."""
         raise NotImplementedError()
 
-    def perform_validation(self, n):
+    def perform_validation(self):
         """Performs validation sets."""
 
-        fixed_params = self.get_fixed_params()
+        fixed_params = self.get_experiment_params()
                     
         self.train = []
         self.valid = []
         self.val_set = []         
         self.train_set = []
-        self.n_splits = fixed_params.get("n_splits", 10)                                            
+        self.n_splits = fixed_params['n_splits']                                           
         skf = StratifiedKFold(self.n_splits, shuffle=True, random_state=self.seed)
+        self.seed += 1
         
         for train_index, val_index in skf.split(self.x_train, self.y_train):
                     
@@ -69,13 +49,13 @@ class GenericDataFormatter(abc.ABC):
                                self.rmax_train[val_index],
                                self.y_train[val_index]]
                              )
-
-        pickle.dump(self.train_set,
-                    open(self.data_path+"_train_sets.dat", "wb")
-                   )
-        pickle.dump(self.val_set,
-                    open(self.data_path+"_valid_sets.dat", "wb")
-                   )
+            
+        #pickle.dump(self.train_set,
+        #            open(self.data_path+"_train_sets.dat", "wb")
+        #           )
+        #pickle.dump(self.val_set,
+        #            open(self.data_path+"_valid_sets.dat", "wb")
+        #           )
                                                   
 
     def load_data(self, split=None):
@@ -95,13 +75,30 @@ class GenericDataFormatter(abc.ABC):
                 valid = []
                 
             self.model_path = self.model_path_temp+"_"+str(split)
-        
+  
+        #df = pd.DataFrame(train[0])    
+        #df.to_csv(self.data_path+'xtrain_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(test[0])    
+        #df.to_csv(self.data_path+'xtest_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(train[1])    
+        #df.to_csv(self.data_path+'rtrain_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(test[1])    
+        #df.to_csv(self.data_path+'rtest_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(train[3])    
+        #df.to_csv(self.data_path+'ytrain_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(test[3])    
+        #df.to_csv(self.data_path+'ytest_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(train[2])    
+        #df.to_csv(self.data_path+'rmaxtrain_'+str(self.seed)+'.csv')  
+        #df = pd.DataFrame(test[2])    
+        #df.to_csv(self.data_path+'rmaxtest_'+str(self.seed)+'.csv')             
+
         return train, test, valid
 
     def save_models(self, n, expt, simulated_expt):
         """Save the data for experiments.
         Args:
-            n, expt, simulated_expt =
+            n, expt, simulated_expt
             # of repeat, name of the experiment, name of the simulated experiments
         """
         
@@ -123,8 +120,8 @@ class GenericDataFormatter(abc.ABC):
         self.results_path_temp = self.results_path 
         
         data = [self.train, self.test] 
-        pickle.dump(data, open(self.data_path+".dat", "wb"))
-        
+        #pickle.dump(data, open(self.data_path+".dat", "wb"))  do not write the data for now
+
     @abc.abstractmethod
     def get_fixed_params(self):
         """Defines the fixed parameters used by the model for training.
@@ -138,6 +135,7 @@ class GenericDataFormatter(abc.ABC):
               'num_repeats': 1,
               'testing': True,
               'validation': False,
+              'n_splits',
               'scaler': True
           }
         """
@@ -147,7 +145,7 @@ class GenericDataFormatter(abc.ABC):
         """Returns fixed model parameters for experiments."""
 
         required_keys = [
-            'n_epochs', 'num_repeats', 'device', 'testing', 'validation', 'scaler'
+            'n_epochs', 'num_repeats', 'device', 'testing', 'validation', 'n_splits', 'scaler'
         ]
 
         fixed_params = self.get_fixed_params()
@@ -171,9 +169,7 @@ class GenericDataFormatter(abc.ABC):
           A dictionary of fixed parameters, e.g.:
           fixed_params = {
               'bayes_trials': 20,
-              'batch_size_bayes': [],
-              'dnn_layers_bayes': [],
-              'inner_cval': True,
+              'n_val_splits': 10
           }
         """
         raise NotImplementedError   
@@ -182,7 +178,7 @@ class GenericDataFormatter(abc.ABC):
         """Returns bayesian optimization parameters for experiments."""
 
         required_keys = [
-            'bayes_trials', 'batch_size_bayes', 'dnn_layers_bayes', 'inner_cval'
+            'bayes_trials', 'n_val_splits'
         ]
         bayes_params = self.get_tuning_params()
         

@@ -1,19 +1,6 @@
-# coding: utf-8
-# Copyright 2020 Tarkan Temizoz
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import numpy as np
+from scipy.stats import skewnorm
+
 import data_formatters.base
 
 GenericDataFormatter = data_formatters.base.GenericDataFormatter
@@ -41,7 +28,7 @@ class data_generator(GenericDataFormatter):
         self.scaler = False
         self.validation = self.params["validation"]
         self.testing = self.params["testing"]
-        self.seed = 42
+        self.seed = 420
         self.train = []
         self.test = []     
         self.valid = []  
@@ -95,7 +82,7 @@ class data_generator(GenericDataFormatter):
         data_random = np.random.normal(0, 1, size = (n_total, self.num_features))
         data = np.zeros((n_total, self.num_features))
         for j in range(self.num_features):
-            data[:,j] = (data_random[:,j] if j % 2 == 0 else data_int[:,j])
+            data[:,j] = (data_int[:,j] if j % 2 == 0 else data_random[:,j])
         self.x_train = data[0:self.n]
         self.x_test = data[self.n:n_total]
         
@@ -106,10 +93,15 @@ class data_generator(GenericDataFormatter):
         std = self.y_train.std()
         self.y_train = (self.y_train - mean) / std
         self.y_test = (self.y_test - mean) / std
+
+        t = self.y_train
         np.random.seed(self.seed + n_total)
         noise = np.random.normal(0, self.noise, size = (self.n, self.num_class))
         self.y_train = self.y_train + noise
-                
+        #for i in range(0,100): 
+        #    print("Y1 is: %0.2f Y2 is: %0.2f" % (t[i,0] , t[i,1] ))              
+        #    print("After Noise      Y1 is: %0.2f Y2 is: %0.2f" % (self.y_train[i,0] , self.y_train[i,1] ))              
+            
         self.r_train, self.y_train = self.returns(self.y_train)
         self.r_test, self.y_test = self.returns(self.y_test)
         self.rmax_train = np.amax(self.r_train, 1)
@@ -127,8 +119,14 @@ class data_generator(GenericDataFormatter):
         """
         
         returns = np.zeros((len(y),self.num_class))
-        outcomes = np.argmax(y, 1)
-        
+
+        #outcomes = np.argmax(y, 1)
+        outcomes = np.zeros(len(y))
+        for i in range(len(y)):
+            t = np.exp(y[i,0])/(np.exp(y[i,1])+np.exp(y[i,0]))
+            if t < np.random.uniform():
+                outcomes[i] = 1     
+                
         if self.expt_name == "ex1" or self.expt_name == "ex2":
             
             np.random.seed(self.seed)
@@ -136,13 +134,25 @@ class data_generator(GenericDataFormatter):
                                   -np.random.uniform(50,150,(len(y),1)),
                                   np.random.uniform(500,2000,(len(y),1)),
                                   -np.random.uniform(50,150,(len(y),1))),
-                                 axis = 1)
-            
+                                 axis = 1)            
+      
             for i in range(len(y)):
                 
                 returns[i,0] = (ret[i,0] if outcomes[i] == 0 else ret[i,1])
                 returns[i,1] = (ret[i,2] if outcomes[i] == 1 else ret[i,3])
-                
+
+            #for i in range(len(y)):  
+            #    skewness = 10
+            #    if outcomes[i] == 0:
+
+            #        returns[i,0] = skewnorm.rvs(4, size=1) * 7
+            #        returns[i,1] = skewnorm.rvs(-4, size=1) * 1
+            #    else:
+            #        returns[i,0] = skewnorm.rvs(-4, size=1) * 1
+            #        returns[i,1] = skewnorm.rvs(4, size=1) * 2
+
+            outcomes = np.argmax(returns,1)
+
         elif self.expt_name == "ex3" or self.expt_name == "ex4":
             
             np.random.seed(self.seed)
@@ -182,20 +192,54 @@ class data_generator(GenericDataFormatter):
             
             for i in range(len(arr)):     
                          
-                y[i,0] = (sum(arr[i,(0,1,7,10,13)])
-                          + (np.where(arr[i,6] > -0.6, 5, 0)
-                             + abs(arr[i,2] * arr[i,4])))
-                y[i,1] = sum(arr[i,(0,1,7,10,13)]) + abs(arr[i,12] * arr[i,14])       
-                
+                #y[i,0] = (sum(arr[i,(0,1,7,10,13)])
+                #          + (np.where(arr[i,6] > -0.6, 5, 0)
+                #             + abs(arr[i,2] * arr[i,4])))
+               
+                #y[i,1] = sum(arr[i,(0,1,7,10,13)]) + abs(arr[i,12] * arr[i,14])       
+
+                #y[i,0] = np.where(arr[i,5] > 1, 5, 0) - 5 - 1 / 2 * (arr[i,1] * arr[i,1] + arr[i,2] + arr[i,3] *
+                #                                                     arr[i,3] + arr[i,5] * arr[i,5] +
+                #                arr[i,7] * arr[i,7] + arr[i,9] * arr[i,9] + arr[i,4] + arr[i,6] + arr[i,8] - 11)
+                #y[i,1] = np.where(arr[i,5] > 1, 5, 0) - 5 + 1 / 2 * (arr[i,1] * arr[i,1] + arr[i,2] + arr[i,3] *
+                #                                                     arr[i,3] + arr[i,5] * arr[i,5] +
+                #                arr[i,7] * arr[i,7] + arr[i,9] * arr[i,9] + arr[i,4] + arr[i,6] + arr[i,8] - 11)
+
+                y[i,0] = arr[i,0] + arr[i,2] + arr[i,4] + arr[i,6] + arr[i,8] + (np.where(arr[i,1] > 0, 4, 0)
+                                                                                 + np.where(arr[i,3] > 0, 1, 0)
+                                                                                + np.where(arr[i,5] > 0, 4, 0)
+                                                                                + np.where(arr[i,7] > 0, 1, 0)
+                                                                                + arr[i,8] * arr[i,9] * 2)
+                y[i,1] = arr[i,0] + arr[i,2] + arr[i,4] + arr[i,6] + arr[i,8] - (np.where(arr[i,1] > 0, 4, 0)
+                                                                                 + np.where(arr[i,3] > 0, 1, 0)
+                                                                                + np.where(arr[i,5] > 0, 4, 0)
+                                                                                + np.where(arr[i,7] > 0, 1, 0)
+                                                                                + arr[i,8] * arr[i,9] * 2)
+            print(sum(y[:,0] <= y[:,1]) / len(y))
+
+
         elif self.expt_name == "ex2":
             
             for i in range(len(arr)):
                 
-                    y[i,0] = (sum(arr[i,(0,1,6,9,11,16,23)])
-                              + (np.where(arr[i,10] > -0.6, 5, 0)
-                                 + abs(arr[i,18] * arr[i,20]) + arr[i,23]))
-                    y[i,1] = (sum(arr[i,(0,1,6,9,11,16,23)])
-                              + abs(arr[i,12] * arr[i,14]) + arr[i,19]) 
+                    #y[i,0] = (sum(arr[i,(0,1,6,9,11,16,23)])
+                    #          + (np.where(arr[i,10] > -0.6, 5, 0)
+                    #             - abs(arr[i,18] * arr[i,20]) + arr[i,23]))
+
+                    #y[i,1] = (sum(arr[i,(0,1,6,9,11,16,23)])
+                    #          + abs(arr[i,12] * arr[i,14]) + arr[i,19]) 
+
+                    y[i,0] = np.where(arr[i,1] > 1, 5, 0) - 5 - 0.25 * (arr[i,1] * arr[i,1] +
+                                                                        arr[i,2] + arr[i,3] * arr[i,3] +
+                                                                        arr[i,4] + arr[i,5] * arr[i,5] +
+                                                                        arr[i,6] + arr[i,7] * arr[i,7] + 
+                                                                        arr[i,8] + arr[i,9] * arr[i,9]- 6)
+                    y[i,1] = np.where(arr[i,1] > 1, 5, 0) - 5 + 0.25 * (arr[i,1] * arr[i,1] +
+                                                                        arr[i,2] + arr[i,3] * arr[i,3] +
+                                                                        arr[i,4] + arr[i,5] * arr[i,5] +
+                                                                        arr[i,6] + arr[i,7] * arr[i,7] + 
+                                                                        arr[i,8] + arr[i,9] * arr[i,9]- 6)
+            print(sum(y[:,0] <= y[:,1]) / len(y))
                 
         elif self.expt_name == "ex3":
             
@@ -232,6 +276,7 @@ class data_generator(GenericDataFormatter):
 
         fixed_params = {
             'n_epochs': 1000,
+            'n_steps': 100,
             'device': "cpu",
             'num_repeats': 50,
             'testing' : True,
@@ -249,8 +294,8 @@ class data_generator(GenericDataFormatter):
 
         model_params = {
             'dnn_layer': 1,
-            'learning_rate': 0.01,
-            'batch_size': 1000,
+            'learning_rate': 0.005,
+            'batch_size': 100000,
             'batch_norm': False
         }
         return model_params
@@ -261,14 +306,14 @@ class data_generator(GenericDataFormatter):
         params_simul = {}
         params_simul['ex1'] = {
             'num_class': 2,
-            'num_features': 15,
-            'noise': 1,
-            'n': 1000,
+            'num_features': 12,
+            'noise':1,
+            'n': 3000,
             'n_test': 20000,
         }
         params_simul['ex2'] = {
             'num_class': 2,
-            'num_features': 25,
+            'num_features': 12,
             'noise': 1,
             'n': 3000,
             'n_test': 20000
@@ -315,10 +360,8 @@ class data_generator(GenericDataFormatter):
         """Returns default model parameters."""
 
         bayes_params = {
-            'bayes_trials': 50,
-            'batch_size_bayes': None,
-            'dnn_layers_bayes': None,           
-            'inner_cval': True,
+            'bayes_trials': 100,
+            'n_val_splits': 10    
         }
 
         return bayes_params

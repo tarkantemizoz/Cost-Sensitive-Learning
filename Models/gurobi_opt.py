@@ -1,21 +1,6 @@
-# coding: utf-8
-# Copyright 2020 Tarkan Temizoz
-
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import numpy as np
-from gurobipy import *
 
+from gurobipy import *
 
 class Optimization_MIP:
     """ A helper class to create mixed-integer programming model EDCS learning problem
@@ -51,16 +36,23 @@ class Optimization_MIP:
         self.beta_lower = config.get("beta_lower", GRB.INFINITY)
         self.score_upper_bound = config.get("upper_bound", 100)
         self.score_lower_bound = config.get("lower_bound", -100)
-        self.margin = config.get("margin", 0.01)
-        
+        self.min_diff = config.get("min_diff", 0.01)       
+
         self.m = Model("Opt")
         self.beta = self.m.addVars(self.num_class, self.num_features,
                                    vtype=GRB.CONTINUOUS,
-                                   name="beta",lb=-self.beta_lower)
+                                   name="beta",lb=-self.beta_lower, ub=self.beta_lower)
         self.d = self.m.addVars(self.n, self.num_class,
               obj=returns,
               vtype=GRB.BINARY,
               name="d")
+        self.bias = self.m.addVars(self.num_class,
+              vtype=GRB.CONTINUOUS,
+              name="bias",lb=-self.beta_lower, ub=self.beta_lower)
+        self.margin = self.m.addVar(
+              obj=1,
+              vtype=GRB.CONTINUOUS,
+              name="margin", lb= self.min_diff)
         self.p = self.m.addVars(self.n, self.num_class,
               vtype=GRB.CONTINUOUS,
               name="probs",lb=self.score_lower_bound,ub=self.score_upper_bound)
@@ -70,14 +62,13 @@ class Optimization_MIP:
     
         for i in range(self.n):
             
-            # ensurinh each instance is labeled as only one class
+            # ensuring each instance is labeled as only one class
             self.m.addConstr(sum(self.d[i,j] for j in range(self.num_class)) == 1)
             
             for j in range(self.num_class):
                 
                 # determining the score values
-                self.m.addConstr((self.p[i,j] - sum(data[i,s] * self.beta[j,s]
-                                                    for s in range(self.num_features)) == 0))
+                self.m.addConstr((self.p[i,j] - sum(data[i,s] * self.beta[j,s] for s in range(self.num_features)) + self.bias[j] == 0))
                                                     
                 # determining the labelling decisions
                 self.m.addConstr(sum(self.q[i,j,t] for t in range((j+1),self.num_class)) -
@@ -90,7 +81,16 @@ class Optimization_MIP:
                     
                     # conducting pairwise comparisons
                     self.m.addConstr(self.p[i,j] - self.p[i,t] -
-                                     (self.score_upper_bound - self.score_lower_bound) * self.q[i,j,t] <= -self.margin)
+                                     (self.score_upper_bound - self.score_lower_bound) * self.q[i,j,t] <= - self.margin)
                     self.m.addConstr(self.p[i,j] - self.p[i,t] +
                                      (self.score_upper_bound - self.score_lower_bound) * (1 - self.q[i,j,t]) >= self.margin)
+
+
+
+                
+                
+                             
+                            
+
+
 
