@@ -195,7 +195,7 @@ class ml_models:
         if (return_results):
             return self.return_results(svm_fit, x_train, x_test, x_val)
 
-    def svm_costsensitive(self):
+    def svm_costsensitive(self, return_results = True):
         """Runs Cost Sensitive SVM on the input.
             
         Returns:
@@ -218,8 +218,11 @@ class ml_models:
             svm_model = SVM("linear", C=10)
             svm_model.fit(x_train, self.y_train, self.r_train)
           
-        return self.return_results(svm_model, x_train, x_test, x_val)
+        self.svm_cost_model = svm_model
         
+        if (return_results):
+            return self.return_results(svm_model, x_train, x_test, x_val)
+                
     def return_results(self, model, x_train, x_test, x_val=None):
         """Evaluates the model outputs.
 
@@ -378,7 +381,25 @@ class ml_models:
         if self.expt == "svm_cost":
             
             return self.svm_costsensitive()
+
+        if self.expt == "mip_svm_cost":
+            
+            if self.svm_cost_model is None:
+                self.svm_costsensitive(False)   
                 
+            if (self.r_train.shape[1] == 2):
+                betas = np.zeros((2, self.x_train.shape[1]))
+                biases = np.zeros(2)
+                betas[0,] = -self.svm_cost_model.w
+                biases[0] = -self.svm_cost_model.b                
+            else:
+                raise RuntimeError("You cannot run SVM-Cost algorithm on multiclass datasets.")
+                
+            self.cslr_model.expt = "mip_svm_cost"                        
+            self.cslr_model.set_initial_params(betas, biases)
+       
+            return self.cslr_model.result()   
+        
         if self.expt == "tree_costcla":
             
             return self.tree_costcla()

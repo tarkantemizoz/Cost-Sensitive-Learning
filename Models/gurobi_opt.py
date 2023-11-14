@@ -68,7 +68,7 @@ class Optimization_MIP:
             for j in range(self.num_class):
                 
                 # determining the score values
-                self.m.addConstr((self.p[i,j] - sum(data[i,s] * self.beta[j,s] for s in range(self.num_features)) + self.bias[j] == 0))
+                self.m.addConstr((self.p[i,j] - (sum(data[i,s] * self.beta[j,s] for s in range(self.num_features)) + self.bias[j])  == 0))
                                                     
                 # determining the labelling decisions
                 self.m.addConstr(sum(self.q[i,j,t] for t in range((j+1),self.num_class)) -

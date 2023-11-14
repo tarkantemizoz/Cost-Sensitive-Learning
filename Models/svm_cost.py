@@ -74,21 +74,10 @@ class SVM(object):
                 self.b -= a[j] * y[j] * K[j,i]   
                 
         self.b /= len(ind)
-        self.w = np.sum(a[:, np.newaxis] * y[:, np.newaxis] * X, axis=0)
+        self.w = np.sum(a[:, np.newaxis] * y * X, axis=0)
         self.X = X
         self.y = y
         self.a = a
-        print(self.a)
-        
-        print(self.y)
-        print(X)
-        
-        print(self.w)
-        print(self.b)
-        print("Shape of a:", a.shape)
-        print("Shape of y:", y.shape)           
-        print("Shape of X:", X.shape)
-        print("Shape of w:", self.w.shape)   
         
     def project(self, X):
 

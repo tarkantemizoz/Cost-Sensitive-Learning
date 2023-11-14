@@ -213,15 +213,14 @@ if __name__ == "__main__":
         edcs_methods.append("mip_wi")
     
     if (use_ml):
-        # ml_methods.append("logistic")
-        # ml_methods.append("mip_logistic")
-        # ml_methods.append("tree")       
-        # ml_methods.append("xgboost")
-        # ml_methods.append("svm")
-        # ml_methods.append("mip_svm")    
-        # ml_methods.append("svm_cost")    
-        # ml_methods.append("mip_svm_cost")    
-        ml_methods = ["svm_cost"]
+        ml_methods.append("logistic")
+        ml_methods.append("mip_logistic")
+        ml_methods.append("tree")       
+        ml_methods.append("xgboost")
+        ml_methods.append("svm")
+        ml_methods.append("mip_svm")    
+        ml_methods.append("svm_cost")    
+        ml_methods.append("mip_svm_cost")    
         
     if (use_cost_cla):
         costcla_methods = ["tree_costcla", "rf_costcla", "rp_costcla", "pasting_costcla", "bagging_costcla"]
